@@ -12,15 +12,10 @@
 -- - Fachraum-Zuordnungen (Chemie/Informatik in entsprechenden Fachräumen)
 -- - Testdaten für spezifische Abfragen (Klasse 10B, freie Fachräume, etc.)
 --
--- Autor: [Student Name] - Universitätsprojekt
 -- DBMS: MariaDB
 -- ================================================================================
 
 USE LearnOn;
-
--- ================================================================================
--- GEBÄUDE-DATEN
--- ================================================================================
 -- Einfügen der Schulgebäude
 
 INSERT INTO Gebaeude (Name) VALUES 
@@ -28,9 +23,6 @@ INSERT INTO Gebaeude (Name) VALUES
     ('Naturwissenschaften'), -- GebaeudeID 2: Fachräume für Chemie, Physik, Biologie
     ('Sporttrakt');          -- GebaeudeID 3: Sporthallen und Umkleiden
 
--- ================================================================================
--- RAUM-DATEN
--- ================================================================================
 -- Einfügen verschiedener Raumtypen in die entsprechenden Gebäude
 
 INSERT INTO Raeume (GebaeudeID, Name, Typ) VALUES 
@@ -55,9 +47,6 @@ INSERT INTO Raeume (GebaeudeID, Name, Typ) VALUES
     (3, 'SH2', 'Sport'),         -- RaumID 14: Sporthalle 2
     (1, 'AULA', 'Aula');         -- RaumID 15: Aula im Hauptgebäude
 
--- ================================================================================
--- FÄCHER-DATEN
--- ================================================================================
 -- Einfügen der Unterrichtsfächer mit Fachraum-Anforderungen
 
 INSERT INTO Faecher (Kuerzel, Name, IstFachraumErforderlich) VALUES 
@@ -74,9 +63,7 @@ INSERT INTO Faecher (Kuerzel, Name, IstFachraumErforderlich) VALUES
     ('KU', 'Kunst', FALSE),             -- FachID 11: Standard-Raum ausreichend
     ('MU', 'Musik', FALSE);             -- FachID 12: Standard-Raum ausreichend
 
--- ================================================================================
--- LEHRER-DATEN
--- ================================================================================
+
 -- Einfügen der Lehrkräfte mit realistischen Kürzeln und Namen
 
 INSERT INTO Lehrer (Kuerzel, Name) VALUES 
@@ -91,9 +78,7 @@ INSERT INTO Lehrer (Kuerzel, Name) VALUES
     ('BRA', 'Julia Braun'),             -- LehrerID 9: Englisch/Musik
     ('FIS', 'Robert Fischer');          -- LehrerID 10: Sport/Physik
 
--- ================================================================================
--- LEHRER-FÄCHER ZUORDNUNG
--- ================================================================================
+
 -- Many-to-Many Verknüpfung: Welcher Lehrer unterrichtet welche Fächer
 
 INSERT INTO Lehrer_Faecher (LehrerID, FachID) VALUES 
@@ -118,9 +103,6 @@ INSERT INTO Lehrer_Faecher (LehrerID, FachID) VALUES
     -- Fischer: Sport und Physik
     (10, 8), (10, 5);
 
--- ================================================================================
--- ZEITSLOT-DATEN
--- ================================================================================
 -- Erstellen des Schulzeit-Rasters: Montag bis Freitag, 1. bis 8. Stunde
 
 INSERT INTO Zeitslots (Wochentag, Stunde) VALUES 
@@ -135,9 +117,7 @@ INSERT INTO Zeitslots (Wochentag, Stunde) VALUES
     -- Freitag (Wochentag 5)
     (5, 1), (5, 2), (5, 3), (5, 4), (5, 5), (5, 6), (5, 7), (5, 8);
 
--- ================================================================================
--- LERNGRUPPEN-DATEN
--- ================================================================================
+
 -- Einfügen von Klassen (Sekundarstufe I) und Kursen (Sekundarstufe II)
 
 INSERT INTO Lerngruppen_Kurse (Name, Typ, Jahrgangsstufe) VALUES 
@@ -156,9 +136,7 @@ INSERT INTO Lerngruppen_Kurse (Name, Typ, Jahrgangsstufe) VALUES
     ('Q2-GK-MA-3', 'Kurs', 12),     -- LerngruppeID 10: Q2 Mathe Grundkurs
     ('Q2-GK-IF-1', 'Kurs', 12);     -- LerngruppeID 11: Q2 Informatik Grundkurs
 
--- ================================================================================
--- UNTERRICHTSSTUNDEN - REGEL-STUNDEN
--- ================================================================================
+
 -- Erstellen eines realistischen Stundenplans mit allen Regel-Stunden
 
 INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ) VALUES 
@@ -246,9 +224,6 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     (27, 9, 4, 4, 7, 'Regel'),      -- Donnerstag 3.: Q2-LK-CH-1 mit Prof. Neumann
     (34, 1, 3, 9, 5, 'Regel');      -- Freitag 2.: 5A Englisch mit Braun
 
--- ================================================================================
--- VERTRETUNGSSTUNDEN
--- ================================================================================
 -- Beispiele für Vertretungen: Eine andere Lehrkraft übernimmt die Stunde
 
 INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ, VerweisAufStundeID) VALUES 
@@ -272,11 +247,7 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
 INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ, VerweisAufStundeID) VALUES 
     (28, 4, 3, 9, 4, 'Vertretung', 50);  -- Braun übernimmt Webers Englischstunde
 
--- ================================================================================
--- AUSFALLSTUNDEN  
--- ================================================================================
 -- Beispiele für Stundenausfälle
-
 -- Zusätzliche Regel-Stunde für Ausfall-Beispiel
 INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ) VALUES 
     (29, 3, 8, 6, 13, 'Regel');          -- StundeID wird ~52: Do 5. Stunde - 8B Sport mit Bauer
