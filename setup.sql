@@ -167,3 +167,292 @@ CREATE TABLE Unterrichtsstunde (
     UNIQUE KEY uk_raum_zeitslot (RaumID, ZeitSlotID),         -- Ein Raum kann nicht zur gleichen Zeit mehrfach belegt sein
     UNIQUE KEY uk_lerngruppe_zeitslot (LerngruppeID, ZeitSlotID) -- Eine Lerngruppe kann nicht zur gleichen Zeit mehrere Stunden haben
 ) ENGINE=InnoDB;
+
+
+-- ================================================================================
+-- BERECHTIGUNGSKONZEPT FÜR DAS STUNDENPLAN-SYSTEM
+-- ================================================================================
+
+-- ********************************************************************************
+-- ROLLEN-DEFINITION UND BEGRÜNDUNG
+-- ********************************************************************************
+
+/*
+BERECHTIGUNGSKONZEPT - ÜBERBLICK:
+
+Das Berechtigungskonzept folgt dem Prinzip der minimalen Rechte (Principle of Least Privilege)
+und berücksichtigt die verschiedenen Nutzergruppen einer Schule:
+
+1. ADMIN_ROLLE: Vollzugriff für Systemadministratoren
+2. STUNDENPLAN_VERWALTER: Schreibzugriff für Stundenplan-Verwaltung
+3. LEHRER: Lesezugriff auf eigene Stunden und allgemeine Pläne
+4. SCHUELER: Eingeschränkter Lesezugriff nur auf öffentliche Informationen
+5. VERTRETUNGS_VERWALTER: Spezielle Rechte für Vertretungsplan-Management
+
+Sicherheitsprinzipien:
+- Rollenbasierte Zugriffskontrolle (RBAC)
+- Datenschutz durch minimale Sichtbarkeit
+- Auditierbarkeit durch benannte Benutzerkonten
+*/
+
+-- ********************************************************************************
+-- SCHRITT 1: ROLLEN ERSTELLEN
+-- ********************************************************************************
+
+-- Administrative Vollzugriffs-Rolle
+CREATE ROLE 'LearnOn_Admin';
+
+-- Stundenplan-Verwaltung (Schulleitung, Sekretariat)
+CREATE ROLE 'LearnOn_Stundenplan_Verwalter';
+
+-- Lehrkräfte (Einsicht in eigene Stunden und Gesamtpläne)
+CREATE ROLE 'LearnOn_Lehrer';
+
+-- Schüler/Eltern (Einsicht in öffentliche Stundenpläne)
+CREATE ROLE 'LearnOn_Schueler';
+
+-- Vertretungsplan-Verwaltung (oft separate Zuständigkeit)
+CREATE ROLE 'LearnOn_Vertretungs_Verwalter';
+
+
+-- ********************************************************************************
+-- SCHRITT 2: BERECHTIGUNGEN PRO ROLLE DEFINIEREN
+-- ********************************************************************************
+
+-- ========================================
+-- ADMIN_ROLLE: Vollzugriff auf alles
+-- ========================================
+
+-- Vollzugriff auf alle Tabellen
+GRANT ALL PRIVILEGES ON LearnOn.* TO 'LearnOn_Admin';
+
+-- Berechtigung zum Verwalten anderer Benutzer
+GRANT CREATE USER, DROP USER, GRANT OPTION ON *.* TO 'LearnOn_Admin';
+
+
+-- ========================================
+-- STUNDENPLAN_VERWALTER: Vollzugriff auf Schulbetrieb
+-- ========================================
+
+-- Vollzugriff auf alle fachlichen Tabellen
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Gebaeude TO 'LearnOn_Stundenplan_Verwalter';
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Raeume TO 'LearnOn_Stundenplan_Verwalter';
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Lehrer TO 'LearnOn_Stundenplan_Verwalter';
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Faecher TO 'LearnOn_Stundenplan_Verwalter';
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Lehrer_Faecher TO 'LearnOn_Stundenplan_Verwalter';
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Zeitslots TO 'LearnOn_Stundenplan_Verwalter';
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Lerngruppen_Kurse TO 'LearnOn_Stundenplan_Verwalter';
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Unterrichtsstunde TO 'LearnOn_Stundenplan_Verwalter';
+
+
+-- ========================================
+-- LEHRER_ROLLE: Lesezugriff + eingeschränkte Änderungen
+-- ========================================
+
+-- Lesezugriff auf Stammdaten
+GRANT SELECT ON LearnOn.Gebaeude TO 'LearnOn_Lehrer';
+GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Lehrer';
+GRANT SELECT ON LearnOn.Lehrer TO 'LearnOn_Lehrer';
+GRANT SELECT ON LearnOn.Faecher TO 'LearnOn_Lehrer';
+GRANT SELECT ON LearnOn.Lehrer_Faecher TO 'LearnOn_Lehrer';
+GRANT SELECT ON LearnOn.Zeitslots TO 'LearnOn_Lehrer';
+GRANT SELECT ON LearnOn.Lerngruppen_Kurse TO 'LearnOn_Lehrer';
+GRANT SELECT ON LearnOn.Unterrichtsstunde TO 'LearnOn_Lehrer';
+
+-- Lehrer können ihre eigenen Kontaktdaten aktualisieren
+GRANT UPDATE (Name) ON LearnOn.Lehrer TO 'LearnOn_Lehrer';
+
+
+-- ========================================
+-- SCHUELER_ROLLE: Nur Lesezugriff auf öffentliche Daten
+-- ========================================
+
+-- Nur Lesezugriff auf für Schüler relevante Informationen
+GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Schueler';
+GRANT SELECT ON LearnOn.Faecher TO 'LearnOn_Schueler';
+GRANT SELECT ON LearnOn.Zeitslots TO 'LearnOn_Schueler';
+GRANT SELECT ON LearnOn.Lerngruppen_Kurse TO 'LearnOn_Schueler';
+GRANT SELECT ON LearnOn.Unterrichtsstunde TO 'LearnOn_Schueler';
+
+-- Eingeschränkte Lehrerdaten (nur Kürzel, nicht private Daten)
+GRANT SELECT (LehrerID, Kuerzel) ON LearnOn.Lehrer TO 'LearnOn_Schueler';
+
+
+-- ========================================
+-- VERTRETUNGS_VERWALTER: Spezialzugriff für Vertretungen
+-- ========================================
+
+-- Lesezugriff auf alle Stammdaten
+GRANT SELECT ON LearnOn.Gebaeude TO 'LearnOn_Vertretungs_Verwalter';
+GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Vertretungs_Verwalter';
+GRANT SELECT ON LearnOn.Lehrer TO 'LearnOn_Vertretungs_Verwalter';
+GRANT SELECT ON LearnOn.Faecher TO 'LearnOn_Vertretungs_Verwalter';
+GRANT SELECT ON LearnOn.Lehrer_Faecher TO 'LearnOn_Vertretungs_Verwalter';
+GRANT SELECT ON LearnOn.Zeitslots TO 'LearnOn_Vertretungs_Verwalter';
+GRANT SELECT ON LearnOn.Lerngruppen_Kurse TO 'LearnOn_Vertretungs_Verwalter';
+
+-- Vollzugriff auf Unterrichtsstunden (für Vertretungsmanagement)
+GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Unterrichtsstunde TO 'LearnOn_Vertretungs_Verwalter';
+
+
+-- ********************************************************************************
+-- SCHRITT 3: SICHERHEITS-VIEWS FÜR DATENSCHUTZ
+-- ********************************************************************************
+
+-- View für Lehrkräfte: Nur eigene Stunden einsehen
+CREATE VIEW LearnOn_MeineStunden AS
+SELECT 
+    CASE z.Wochentag 
+        WHEN 1 THEN 'Montag'
+        WHEN 2 THEN 'Dienstag'
+        WHEN 3 THEN 'Mittwoch'
+        WHEN 4 THEN 'Donnerstag'
+        WHEN 5 THEN 'Freitag'
+    END AS Wochentag,
+    z.Stunde,
+    f.Name AS Fach,
+    lg.Name AS Lerngruppe,
+    CONCAT(g.Name, ' - ', r.Name) AS Raum,
+    u.Typ AS Stundentyp
+FROM Unterrichtsstunde u
+    INNER JOIN Zeitslots z ON u.ZeitSlotID = z.ZeitSlotID
+    INNER JOIN Lerngruppen_Kurse lg ON u.LerngruppeID = lg.LerngruppeID  
+    INNER JOIN Faecher f ON u.FachID = f.FachID
+    INNER JOIN Lehrer l ON u.LehrerID = l.LehrerID
+    INNER JOIN Raeume r ON u.RaumID = r.RaumID
+    INNER JOIN Gebaeude g ON r.GebaeudeID = g.GebaeudeID
+WHERE 
+    l.Kuerzel = SUBSTRING_INDEX(USER(), '_', -1) -- Filtert auf aktuellen Benutzer (z.B. lehrer_mue -> mue)
+    AND u.Typ IN ('Regel', 'Vertretung');
+
+-- View für Schüler: Anonymisierte Lehrerdaten
+CREATE VIEW LearnOn_OeffentlicherStundenplan AS
+SELECT 
+    CASE z.Wochentag 
+        WHEN 1 THEN 'Montag'
+        WHEN 2 THEN 'Dienstag'
+        WHEN 3 THEN 'Mittwoch'
+        WHEN 4 THEN 'Donnerstag'
+        WHEN 5 THEN 'Freitag'
+    END AS Wochentag,
+    z.Stunde,
+    f.Name AS Fach,
+    lg.Name AS Lerngruppe,
+    l.Kuerzel AS Lehrer_Kuerzel,  -- Nur Kürzel, keine Namen
+    r.Name AS Raum,
+    u.Typ AS Stundentyp
+FROM Unterrichtsstunde u
+    INNER JOIN Zeitslots z ON u.ZeitSlotID = z.ZeitSlotID
+    INNER JOIN Lerngruppen_Kurse lg ON u.LerngruppeID = lg.LerngruppeID
+    INNER JOIN Faecher f ON u.FachID = f.FachID
+    INNER JOIN Lehrer l ON u.LehrerID = l.LehrerID
+    INNER JOIN Raeume r ON u.RaumID = r.RaumID
+WHERE 
+    u.Typ IN ('Regel', 'Vertretung');
+
+
+-- ********************************************************************************
+-- SCHRITT 4: BENUTZERKONTEN ERSTELLEN (ohne Passwort)
+-- ********************************************************************************
+
+-- ========================================
+-- ADMINISTRATIVE BENUTZER
+-- ========================================
+
+-- Systemadministrator
+CREATE USER 'admin_system'@'localhost';
+GRANT 'LearnOn_Admin' TO 'admin_system'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Admin' FOR 'admin_system'@'localhost';
+
+-- Schulleitung mit Verwaltungsrechten  
+CREATE USER 'schulleitung_mueller'@'localhost';
+GRANT 'LearnOn_Stundenplan_Verwalter' TO 'schulleitung_mueller'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Stundenplan_Verwalter' FOR 'schulleitung_mueller'@'localhost';
+
+
+-- ========================================
+-- SEKRETARIAT UND VERWALTUNG
+-- ========================================
+
+-- Sekretariat (Stundenplan-Verwaltung)
+CREATE USER 'sekretariat_weber'@'localhost';
+GRANT 'LearnOn_Stundenplan_Verwalter' TO 'sekretariat_weber'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Stundenplan_Verwalter' FOR 'sekretariat_weber'@'localhost';
+
+-- Vertretungsplan-Verwaltung
+CREATE USER 'vertretung_schmidt'@'localhost';
+GRANT 'LearnOn_Vertretungs_Verwalter' TO 'vertretung_schmidt'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Vertretungs_Verwalter' FOR 'vertretung_schmidt'@'localhost';
+
+
+-- ========================================
+-- LEHRKRÄFTE (Beispiele aus der Datenbank)
+-- ========================================
+
+-- Dr. Maria Müller (Mathematik/Physik)
+CREATE USER 'lehrer_mue'@'localhost';
+GRANT 'LearnOn_Lehrer' TO 'lehrer_mue'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_mue'@'localhost';
+
+-- Thomas Schmidt (Deutsch/Geschichte)
+CREATE USER 'lehrer_sch'@'localhost';
+GRANT 'LearnOn_Lehrer' TO 'lehrer_sch'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_sch'@'localhost';
+
+-- Sarah Weber (Englisch/Erdkunde)
+CREATE USER 'lehrer_web'@'localhost';
+GRANT 'LearnOn_Lehrer' TO 'lehrer_web'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_web'@'localhost';
+
+-- Prof. Klaus Neumann (Chemie/Biologie)
+CREATE USER 'lehrer_neu'@'localhost';
+GRANT 'LearnOn_Lehrer' TO 'lehrer_neu'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_neu'@'localhost';
+
+
+-- ========================================
+-- SCHÜLER UND ELTERN (Beispiele)
+-- ========================================
+
+-- Schülervertreter
+CREATE USER 'schueler_sv'@'localhost';
+GRANT 'LearnOn_Schueler' TO 'schueler_sv'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'schueler_sv'@'localhost';
+
+-- Elternvertreter
+CREATE USER 'eltern_beirat'@'localhost';
+GRANT 'LearnOn_Schueler' TO 'eltern_beirat'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'eltern_beirat'@'localhost';
+
+-- Öffentlicher Lesezugriff (für Web-Portal)
+CREATE USER 'web_portal'@'localhost';
+GRANT 'LearnOn_Schueler' TO 'web_portal'@'localhost';
+SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'web_portal'@'localhost';
+
+
+-- ********************************************************************************
+-- SCHRITT 5: BERECHTIGUNGEN AUF VIEWS VERGEBEN
+-- ********************************************************************************
+
+-- Lehrkräfte dürfen ihre eigenen Stunden einsehen
+GRANT SELECT ON LearnOn.LearnOn_MeineStunden TO 'LearnOn_Lehrer';
+
+-- Schüler/Eltern dürfen öffentlichen Stundenplan einsehen  
+GRANT SELECT ON LearnOn.LearnOn_OeffentlicherStundenplan TO 'LearnOn_Schueler';
+
+
+-- ********************************************************************************
+-- VALIDIERUNGS-QUERIES FÜR BERECHTIGUNGSKONZEPT
+-- ********************************************************************************
+
+-- Anzeige aller erstellten Rollen
+-- SELECT ROLE AS Rollenname, IS_DEFAULT AS Standard_Rolle
+-- FROM INFORMATION_SCHEMA.APPLICABLE_ROLES 
+-- WHERE GRANTEE LIKE 'LearnOn_%'
+-- ORDER BY ROLE;
+
+-- Anzeige aller Benutzer mit ihren Rollen
+-- SELECT ar.GRANTEE AS Benutzer, ar.ROLE_NAME AS Rolle, ar.IS_GRANTABLE AS Kann_Vergeben
+-- FROM INFORMATION_SCHEMA.APPLICABLE_ROLES ar
+-- WHERE ar.ROLE_NAME LIKE 'LearnOn_%'
+-- ORDER BY ar.GRANTEE, ar.ROLE_NAME;

@@ -12,7 +12,7 @@
 -- - Fachraum-Zuordnungen (Chemie/Informatik in entsprechenden Fachräumen)
 -- - Testdaten für spezifische Abfragen (Klasse 10B, freie Fachräume, etc.)
 --
--- DBMS: MariaDB
+-- DBMS: MariaDB 
 -- ================================================================================
 
 USE LearnOn;
