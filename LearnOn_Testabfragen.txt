@@ -1,0 +1,297 @@
+================================================================================
+LearnOn Stundenplan-Verwaltungssystem - 10 Testabfragen
+================================================================================
+Diese Datei enthält 10 verschiedene SQL-Abfragen zur Validierung und zum Testen
+der LearnOn-Datenbank mit den eingefügten Dummy-Daten.
+
+Jede Abfrage testet verschiedene Aspekte des Datenbankmodells und zeigt die
+praktische Anwendung des Systems.
+
+================================================================================
+
+TEST 1: Vollständiger Stundenplan für Klasse 10B
+================================================================================
+ZWECK: Zeigt den kompletten Wochenstundenplan einer spezifischen Klasse an.
+       Dies ist eine der häufigsten Abfragen in einem Schulverwaltungssystem.
+
+SELECT 
+    CASE z.Wochentag 
+        WHEN 1 THEN 'Montag'
+        WHEN 2 THEN 'Dienstag'
+        WHEN 3 THEN 'Mittwoch'
+        WHEN 4 THEN 'Donnerstag'
+        WHEN 5 THEN 'Freitag'
+    END AS Wochentag,
+    z.Stunde AS Stunde,
+    f.Name AS Fach,
+    l.Kuerzel AS Lehrer,
+    CONCAT(g.Name, ' - ', r.Name) AS Raum,
+    u.Typ AS Stundentyp
+FROM Unterrichtsstunde u
+    INNER JOIN Zeitslots z ON u.ZeitSlotID = z.ZeitSlotID
+    INNER JOIN Lerngruppen_Kurse lg ON u.LerngruppeID = lg.LerngruppeID  
+    INNER JOIN Faecher f ON u.FachID = f.FachID
+    INNER JOIN Lehrer l ON u.LehrerID = l.LehrerID
+    INNER JOIN Raeume r ON u.RaumID = r.RaumID
+    INNER JOIN Gebaeude g ON r.GebaeudeID = g.GebaeudeID
+WHERE lg.Name = '10B'
+ORDER BY z.Wochentag, z.Stunde;
+
+ERWARTETES ERGEBNIS: Zeigt alle Stunden der Klasse 10B von Montag bis Freitag
+                     mit Fach, Lehrer, Raum und Stundentyp (Regel/Vertretung)
+
+================================================================================
+
+TEST 2: Freie Fachräume zur 3. Stunde am Dienstag
+================================================================================
+ZWECK: Ermittelt alle Fachräume, die zu einem bestimmten Zeitpunkt frei sind.
+       Wichtig für Spontanplanung und Raumvergabe.
+
+SELECT 
+    r.Name AS Fachraum,
+    r.Typ AS Raumtyp,
+    g.Name AS Gebaeude,
+    'FREI' AS Status
+FROM Raeume r
+    INNER JOIN Gebaeude g ON r.GebaeudeID = g.GebaeudeID
+WHERE r.Typ IN ('Chemie', 'IT', 'Physik', 'Biologie')
+    AND r.RaumID NOT IN (
+        SELECT u.RaumID 
+        FROM Unterrichtsstunde u
+        INNER JOIN Zeitslots z ON u.ZeitSlotID = z.ZeitSlotID
+        WHERE z.Wochentag = 2 AND z.Stunde = 3 AND u.Typ = 'Regel'
+    )
+ORDER BY r.Typ, r.Name;
+
+ERWARTETES ERGEBNIS: Listet alle Fachräume auf, die Dienstag 3. Stunde frei sind
+                     (sollte CH1, CH2 und IT2 zeigen, da nur IT1 belegt ist)
+
+================================================================================
+
+TEST 3: Lehrerauslastung - Anzahl Stunden pro Lehrer
+================================================================================
+ZWECK: Analysiert die Arbeitsbelastung der Lehrkräfte durch Zählung ihrer
+       Unterrichtsstunden. Hilfreich für Personalplanung.
+
+SELECT 
+    l.Name AS Lehrername,
+    l.Kuerzel AS Kuerzel,
+    COUNT(u.StundeID) AS Anzahl_Stunden,
+    CASE 
+        WHEN COUNT(u.StundeID) >= 20 THEN 'Hoch'
+        WHEN COUNT(u.StundeID) >= 15 THEN 'Mittel' 
+        WHEN COUNT(u.StundeID) >= 10 THEN 'Normal'
+        ELSE 'Niedrig'
+    END AS Auslastung
+FROM Lehrer l
+    LEFT JOIN Unterrichtsstunde u ON l.LehrerID = u.LehrerID AND u.Typ = 'Regel'
+GROUP BY l.LehrerID, l.Name, l.Kuerzel
+ORDER BY COUNT(u.StundeID) DESC, l.Name;
+
+ERWARTETES ERGEBNIS: Zeigt alle Lehrer mit ihrer Stundenzahl und Auslastungskategorie
+                     Sortiert nach Stundenzahl (höchste zuerst)
+
+================================================================================
+
+TEST 4: Vertretungsplan - Alle aktuellen Vertretungen und Ausfälle
+================================================================================
+ZWECK: Zeigt alle Abweichungen vom regulären Stundenplan an.
+       Wichtig für die tägliche Information von Schülern und Lehrern.
+
+SELECT 
+    CASE z.Wochentag 
+        WHEN 1 THEN 'Montag'
+        WHEN 2 THEN 'Dienstag'
+        WHEN 3 THEN 'Mittwoch'
+        WHEN 4 THEN 'Donnerstag'
+        WHEN 5 THEN 'Freitag'
+    END AS Wochentag,
+    z.Stunde AS Stunde,
+    lg.Name AS Klasse,
+    f.Name AS Fach,
+    CASE u.Typ
+        WHEN 'Vertretung' THEN CONCAT(l.Kuerzel, ' (Vertretung)')
+        WHEN 'Ausfall' THEN 'ENTFÄLLT'
+    END AS Lehrer_Status,
+    CONCAT(g.Name, ' - ', r.Name) AS Raum,
+    u.Typ AS Art
+FROM Unterrichtsstunde u
+    INNER JOIN Zeitslots z ON u.ZeitSlotID = z.ZeitSlotID
+    INNER JOIN Lerngruppen_Kurse lg ON u.LerngruppeID = lg.LerngruppeID
+    INNER JOIN Faecher f ON u.FachID = f.FachID
+    INNER JOIN Lehrer l ON u.LehrerID = l.LehrerID
+    INNER JOIN Raeume r ON u.RaumID = r.RaumID
+    INNER JOIN Gebaeude g ON r.GebaeudeID = g.GebaeudeID
+WHERE u.Typ IN ('Vertretung', 'Ausfall')
+ORDER BY z.Wochentag, z.Stunde, lg.Name;
+
+ERWARTETES ERGEBNIS: Zeigt alle Vertretungen und Ausfälle mit Details
+                     (Mathe-Vertretung bei 10B, Englisch-Vertretung bei 9A, Sport-Ausfall bei 8B)
+
+================================================================================
+
+TEST 5: Raumauslastung - Welche Räume werden am häufigsten genutzt?
+================================================================================
+ZWECK: Analysiert die Nutzungshäufigkeit der Räume zur Optimierung 
+       der Raumplanung und -zuordnung.
+
+SELECT 
+    CONCAT(g.Name, ' - ', r.Name) AS Raum_Vollname,
+    r.Typ AS Raumtyp,
+    COUNT(u.StundeID) AS Belegungen_pro_Woche,
+    ROUND((COUNT(u.StundeID) * 100.0 / 40), 1) AS Auslastung_Prozent,
+    CASE 
+        WHEN COUNT(u.StundeID) >= 30 THEN 'Sehr hoch'
+        WHEN COUNT(u.StundeID) >= 20 THEN 'Hoch'
+        WHEN COUNT(u.StundeID) >= 10 THEN 'Mittel'
+        WHEN COUNT(u.StundeID) >= 1 THEN 'Niedrig'
+        ELSE 'Ungenutzt'
+    END AS Auslastungskategorie
+FROM Raeume r
+    INNER JOIN Gebaeude g ON r.GebaeudeID = g.GebaeudeID
+    LEFT JOIN Unterrichtsstunde u ON r.RaumID = u.RaumID AND u.Typ = 'Regel'
+GROUP BY r.RaumID, g.Name, r.Name, r.Typ
+ORDER BY COUNT(u.StundeID) DESC, r.Name;
+
+ERWARTETES ERGEBNIS: Ranking aller Räume nach Nutzungshäufigkeit
+                     (40 Zeitslots = 100% Auslastung, 5 Tage × 8 Stunden)
+
+================================================================================
+
+TEST 6: Fachverteilung - Welche Fächer werden wie oft unterrichtet?
+================================================================================
+ZWECK: Analysiert die Verteilung der Unterrichtsfächer im Stundenplan.
+       Hilfreich für Curriculum-Planung und Ressourcenverteilung.
+
+SELECT 
+    f.Name AS Fach,
+    f.Kuerzel AS Fach_Kuerzel,
+    COUNT(u.StundeID) AS Stunden_pro_Woche,
+    COUNT(DISTINCT u.LerngruppeID) AS Anzahl_Klassen_Kurse,
+    COUNT(DISTINCT u.LehrerID) AS Anzahl_Lehrer,
+    CASE f.IstFachraumErforderlich
+        WHEN TRUE THEN 'Ja'
+        ELSE 'Nein'
+    END AS Fachraum_erforderlich
+FROM Faecher f
+    LEFT JOIN Unterrichtsstunde u ON f.FachID = u.FachID AND u.Typ = 'Regel'
+GROUP BY f.FachID, f.Name, f.Kuerzel, f.IstFachraumErforderlich
+ORDER BY COUNT(u.StundeID) DESC, f.Name;
+
+ERWARTETES ERGEBNIS: Übersicht aller Fächer mit Stundenzahl, beteiligten Klassen
+                     und Lehrern, sortiert nach Häufigkeit
+
+================================================================================
+
+TEST 7: Lehrerqualifikation - Welcher Lehrer unterrichtet welche Fächer?
+================================================================================
+ZWECK: Zeigt die Fach-Zuordnungen der Lehrer und deren tatsächliche Einsätze.
+       Wichtig für Personalplanung und Qualifikationsmanagement.
+
+SELECT 
+    l.Name AS Lehrername,
+    l.Kuerzel AS Lehrer_Kuerzel,
+    GROUP_CONCAT(DISTINCT f.Name ORDER BY f.Name SEPARATOR ', ') AS Qualifizierte_Faecher,
+    COUNT(DISTINCT u.FachID) AS Tatsaechlich_unterrichtete_Faecher,
+    COUNT(u.StundeID) AS Gesamtstunden
+FROM Lehrer l
+    INNER JOIN Lehrer_Faecher lf ON l.LehrerID = lf.LehrerID
+    INNER JOIN Faecher f ON lf.FachID = f.FachID
+    LEFT JOIN Unterrichtsstunde u ON l.LehrerID = u.LehrerID AND u.Typ = 'Regel'
+GROUP BY l.LehrerID, l.Name, l.Kuerzel
+ORDER BY l.Name;
+
+ERWARTETES ERGEBNIS: Für jeden Lehrer: qualifizierte Fächer, tatsächlich unterrichtete
+                     Fächer und Gesamtstundenzahl
+
+================================================================================
+
+TEST 8: Zeitslot-Auslastung - Zu welchen Zeiten ist die Schule am vollsten?
+================================================================================
+ZWECK: Analysiert die Auslastung nach Wochentag und Stunde.
+       Hilfreich für optimale Nutzung der Schulinfrastruktur.
+
+SELECT 
+    CASE z.Wochentag 
+        WHEN 1 THEN 'Montag'
+        WHEN 2 THEN 'Dienstag'
+        WHEN 3 THEN 'Mittwoch'
+        WHEN 4 THEN 'Donnerstag'
+        WHEN 5 THEN 'Freitag'
+    END AS Wochentag,
+    z.Stunde AS Stunde,
+    COUNT(u.StundeID) AS Anzahl_Stunden,
+    COUNT(DISTINCT u.RaumID) AS Belegte_Raeume,
+    COUNT(DISTINCT u.LehrerID) AS Aktive_Lehrer,
+    COUNT(DISTINCT u.LerngruppeID) AS Aktive_Klassen
+FROM Zeitslots z
+    LEFT JOIN Unterrichtsstunde u ON z.ZeitSlotID = u.ZeitSlotID AND u.Typ = 'Regel'
+GROUP BY z.ZeitSlotID, z.Wochentag, z.Stunde
+ORDER BY z.Wochentag, z.Stunde;
+
+ERWARTETES ERGEBNIS: Auslastungsstatistik für jeden Zeitslot mit Anzahl paralleler
+                     Stunden, belegter Räume, aktiver Lehrer und Klassen
+
+================================================================================
+
+TEST 9: Klassenstufenanalyse - Stunden nach Jahrgangsstufen
+================================================================================
+ZWECK: Zeigt die Stundenverteilung nach Klassenstufen und Lerngruppen-Typen.
+       Wichtig für die Planung von Sekundarstufe I und II.
+
+SELECT 
+    lg.Jahrgangsstufe AS Klassenstufe,
+    lg.Typ AS Lerngruppen_Typ,
+    COUNT(DISTINCT lg.LerngruppeID) AS Anzahl_Gruppen,
+    COUNT(u.StundeID) AS Gesamtstunden,
+    ROUND(COUNT(u.StundeID) * 1.0 / COUNT(DISTINCT lg.LerngruppeID), 1) AS Schnitt_Stunden_pro_Gruppe
+FROM Lerngruppen_Kurse lg
+    LEFT JOIN Unterrichtsstunde u ON lg.LerngruppeID = u.LerngruppeID AND u.Typ = 'Regel'
+GROUP BY lg.Jahrgangsstufe, lg.Typ
+ORDER BY lg.Jahrgangsstufe, lg.Typ;
+
+ERWARTETES ERGEBNIS: Übersicht nach Klassenstufen (5-12) und Typen (Klasse/Kurs)
+                     mit Gruppenzahl und durchschnittlicher Stundenzahl
+
+================================================================================
+
+TEST 10: Gebäude- und Raumnutzung - Verteilung auf die Schulgebäude
+================================================================================
+ZWECK: Analysiert die Nutzung der verschiedenen Schulgebäude und Raumtypen.
+       Wichtig für Facility Management und Gebäudeplanung.
+
+SELECT 
+    g.Name AS Gebaeude,
+    r.Typ AS Raumtyp,
+    COUNT(DISTINCT r.RaumID) AS Anzahl_Raeume,
+    COUNT(u.StundeID) AS Gesamtbelegungen,
+    CASE 
+        WHEN COUNT(DISTINCT r.RaumID) > 0 THEN 
+            ROUND(COUNT(u.StundeID) * 1.0 / COUNT(DISTINCT r.RaumID), 1)
+        ELSE 0
+    END AS Durchschnitt_Belegungen_pro_Raum,
+    ROUND((COUNT(u.StundeID) * 100.0 / (COUNT(DISTINCT r.RaumID) * 40)), 1) AS Auslastung_Prozent
+FROM Gebaeude g
+    INNER JOIN Raeume r ON g.GebaeudeID = r.GebaeudeID
+    LEFT JOIN Unterrichtsstunde u ON r.RaumID = u.RaumID AND u.Typ = 'Regel'
+GROUP BY g.GebaeudeID, g.Name, r.Typ
+ORDER BY g.Name, r.Typ;
+
+ERWARTETES ERGEBNIS: Nutzungsstatistik nach Gebäuden und Raumtypen mit
+                     Auslastungsgrad (40 mögliche Zeitslots pro Raum = 100%)
+
+================================================================================
+ENDE DER TESTABFRAGEN
+================================================================================
+
+HINWEISE ZUR AUSFÜHRUNG:
+- Führen Sie zunächst setup.sql und dann dummy_data.sql aus
+- Alle Abfragen sollten Ergebnisse zurückgeben
+- Bei leeren Ergebnissen prüfen Sie die Dummy-Daten auf Vollständigkeit
+- Die Abfragen nutzen realistische Szenarien aus dem Schulalltag
+
+ERWEITERTE TESTS:
+Diese Abfragen können als Grundlage für weitere Tests dienen:
+- Performance-Tests bei größeren Datenmengen
+- Integritätstests der Constraints
+- Funktionale Tests des Berechtigungskonzepts

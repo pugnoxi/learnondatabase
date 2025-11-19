@@ -13,18 +13,18 @@
 -- DBMS: MariaDB
 -- ================================================================================
 
--- Datenbank neu erstellen (falls vorhanden, löschen)
+-- Datenbank neu erstellen (falls vorhanden, verherige Datenbank löschen)
 DROP DATABASE IF EXISTS LearnOn;
 CREATE DATABASE LearnOn;
 USE LearnOn;
 
 /*
  * Speichert alle Gebäude der Schule.
- * Jedes Gebäude hat einen eindeutigen Namen und dient als Container für Räume.
+ * Jedes Gebäude hat einen eindeutigen Namen und dient als Standort für Räume.
  */
 CREATE TABLE Gebaeude (
     GebaeudeID INT AUTO_INCREMENT PRIMARY KEY, -- Eindeutige ID des Gebäudes
-    Name VARCHAR(50) NOT NULL UNIQUE           -- Name des Gebäudes (z.B. 'Hauptgebäude', 'Sporttrakt')
+    Name VARCHAR(50) NOT NULL UNIQUE           -- Name des Gebäudes (z.B. 'Hauptgebäude', 'Sporthalle')
 ) ENGINE=InnoDB;
 
 /*
@@ -98,7 +98,7 @@ CREATE TABLE Zeitslots (
     Stunde INT NOT NULL,                       -- Stundennummer (1-8 für 1.-8. Stunde)
     
     -- Unique Constraint: Pro Wochentag und Stunde nur ein Zeitslot
-    UNIQUE KEY uk_wochentag_stunde (Wochentag, Stunde)
+    UNIQUE (Wochentag, Stunde)
 ) ENGINE=InnoDB;
 
 
@@ -163,9 +163,9 @@ CREATE TABLE Unterrichtsstunde (
     -- partiellen Unique Constraints mit WHERE-Bedingungen. Eine vollständige
     -- Lösung würde Check-Constraints oder Trigger erfordern.
     
-    UNIQUE KEY uk_lehrer_zeitslot (LehrerID, ZeitSlotID),     -- Ein Lehrer kann nicht zur gleichen Zeit mehrere Stunden haben
-    UNIQUE KEY uk_raum_zeitslot (RaumID, ZeitSlotID),         -- Ein Raum kann nicht zur gleichen Zeit mehrfach belegt sein
-    UNIQUE KEY uk_lerngruppe_zeitslot (LerngruppeID, ZeitSlotID) -- Eine Lerngruppe kann nicht zur gleichen Zeit mehrere Stunden haben
+    UNIQUE (LehrerID, ZeitSlotID),     -- Ein Lehrer kann nicht zur gleichen Zeit mehrere Stunden haben
+    UNIQUE (RaumID, ZeitSlotID),         -- Ein Raum kann nicht zur gleichen Zeit mehrfach belegt sein
+    UNIQUE (LerngruppeID, ZeitSlotID) -- Eine Lerngruppe kann nicht zur gleichen Zeit mehrere Stunden haben
 ) ENGINE=InnoDB;
 
 
@@ -200,19 +200,19 @@ Sicherheitsprinzipien:
 -- ********************************************************************************
 
 -- Administrative Vollzugriffs-Rolle
-CREATE ROLE 'LearnOn_Admin';
+CREATE ROLE IF NOT EXISTS 'LearnOn_Admin';
 
 -- Stundenplan-Verwaltung (Schulleitung, Sekretariat)
-CREATE ROLE 'LearnOn_Stundenplan_Verwalter';
+CREATE ROLE IF NOT EXISTS 'LearnOn_Stundenplan_Verwalter';
 
 -- Lehrkräfte (Einsicht in eigene Stunden und Gesamtpläne)
-CREATE ROLE 'LearnOn_Lehrer';
+CREATE ROLE IF NOT EXISTS 'LearnOn_Lehrer';
 
 -- Schüler/Eltern (Einsicht in öffentliche Stundenpläne)
-CREATE ROLE 'LearnOn_Schueler';
+CREATE ROLE IF NOT EXISTS 'LearnOn_Schueler';
 
 -- Vertretungsplan-Verwaltung (oft separate Zuständigkeit)
-CREATE ROLE 'LearnOn_Vertretungs_Verwalter';
+CREATE ROLE IF NOT EXISTS 'LearnOn_Vertretungs_Verwalter';
 
 
 -- ********************************************************************************
@@ -227,7 +227,8 @@ CREATE ROLE 'LearnOn_Vertretungs_Verwalter';
 GRANT ALL PRIVILEGES ON LearnOn.* TO 'LearnOn_Admin';
 
 -- Berechtigung zum Verwalten anderer Benutzer
-GRANT CREATE USER, DROP USER, GRANT OPTION ON *.* TO 'LearnOn_Admin';
+GRANT CREATE USER ON *.* TO 'LearnOn_Admin';
+GRANT RELOAD ON *.* TO 'LearnOn_Admin';
 
 
 -- ========================================
@@ -322,7 +323,7 @@ FROM Unterrichtsstunde u
     INNER JOIN Raeume r ON u.RaumID = r.RaumID
     INNER JOIN Gebaeude g ON r.GebaeudeID = g.GebaeudeID
 WHERE 
-    l.Kuerzel = SUBSTRING_INDEX(USER(), '_', -1) -- Filtert auf aktuellen Benutzer (z.B. lehrer_mue -> mue)
+    l.Kuerzel = SUBSTRING_INDEX(SUBSTRING_INDEX(USER(), '@', 1), '_', -1) -- Filtert auf aktuellen Benutzer (z.B. lehrer_mue -> mue)
     AND u.Typ IN ('Regel', 'Vertretung');
 
 -- View für Schüler: Anonymisierte Lehrerdaten
@@ -360,12 +361,12 @@ WHERE
 -- ========================================
 
 -- Systemadministrator
-CREATE USER 'admin_system'@'localhost';
+CREATE USER IF NOT EXISTS 'admin_system'@'localhost';
 GRANT 'LearnOn_Admin' TO 'admin_system'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Admin' FOR 'admin_system'@'localhost';
 
 -- Schulleitung mit Verwaltungsrechten  
-CREATE USER 'schulleitung_mueller'@'localhost';
+CREATE USER IF NOT EXISTS 'schulleitung_mueller'@'localhost';
 GRANT 'LearnOn_Stundenplan_Verwalter' TO 'schulleitung_mueller'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Stundenplan_Verwalter' FOR 'schulleitung_mueller'@'localhost';
 
@@ -375,12 +376,12 @@ SET DEFAULT ROLE 'LearnOn_Stundenplan_Verwalter' FOR 'schulleitung_mueller'@'loc
 -- ========================================
 
 -- Sekretariat (Stundenplan-Verwaltung)
-CREATE USER 'sekretariat_weber'@'localhost';
+CREATE USER IF NOT EXISTS 'sekretariat_weber'@'localhost';
 GRANT 'LearnOn_Stundenplan_Verwalter' TO 'sekretariat_weber'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Stundenplan_Verwalter' FOR 'sekretariat_weber'@'localhost';
 
 -- Vertretungsplan-Verwaltung
-CREATE USER 'vertretung_schmidt'@'localhost';
+CREATE USER IF NOT EXISTS 'vertretung_schmidt'@'localhost';
 GRANT 'LearnOn_Vertretungs_Verwalter' TO 'vertretung_schmidt'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Vertretungs_Verwalter' FOR 'vertretung_schmidt'@'localhost';
 
@@ -390,22 +391,22 @@ SET DEFAULT ROLE 'LearnOn_Vertretungs_Verwalter' FOR 'vertretung_schmidt'@'local
 -- ========================================
 
 -- Dr. Maria Müller (Mathematik/Physik)
-CREATE USER 'lehrer_mue'@'localhost';
+CREATE USER IF NOT EXISTS 'lehrer_mue'@'localhost';
 GRANT 'LearnOn_Lehrer' TO 'lehrer_mue'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_mue'@'localhost';
 
 -- Thomas Schmidt (Deutsch/Geschichte)
-CREATE USER 'lehrer_sch'@'localhost';
+CREATE USER IF NOT EXISTS 'lehrer_sch'@'localhost';
 GRANT 'LearnOn_Lehrer' TO 'lehrer_sch'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_sch'@'localhost';
 
 -- Sarah Weber (Englisch/Erdkunde)
-CREATE USER 'lehrer_web'@'localhost';
+CREATE USER IF NOT EXISTS 'lehrer_web'@'localhost';
 GRANT 'LearnOn_Lehrer' TO 'lehrer_web'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_web'@'localhost';
 
 -- Prof. Klaus Neumann (Chemie/Biologie)
-CREATE USER 'lehrer_neu'@'localhost';
+CREATE USER IF NOT EXISTS 'lehrer_neu'@'localhost';
 GRANT 'LearnOn_Lehrer' TO 'lehrer_neu'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_neu'@'localhost';
 
@@ -415,17 +416,17 @@ SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_neu'@'localhost';
 -- ========================================
 
 -- Schülervertreter
-CREATE USER 'schueler_sv'@'localhost';
+CREATE USER IF NOT EXISTS 'schueler_sv'@'localhost';
 GRANT 'LearnOn_Schueler' TO 'schueler_sv'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'schueler_sv'@'localhost';
 
 -- Elternvertreter
-CREATE USER 'eltern_beirat'@'localhost';
+CREATE USER IF NOT EXISTS 'eltern_beirat'@'localhost';
 GRANT 'LearnOn_Schueler' TO 'eltern_beirat'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'eltern_beirat'@'localhost';
 
 -- Öffentlicher Lesezugriff (für Web-Portal)
-CREATE USER 'web_portal'@'localhost';
+CREATE USER IF NOT EXISTS 'web_portal'@'localhost';
 GRANT 'LearnOn_Schueler' TO 'web_portal'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'web_portal'@'localhost';
 

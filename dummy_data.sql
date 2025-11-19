@@ -1,21 +1,47 @@
 -- ================================================================================
--- LearnOn Stundenplan-Verwaltungssystem - Beispieldaten
+-- LearnOn Stundenplan-Verwaltungssystem - Korrigierte Beispieldaten
 -- ================================================================================
 -- Dieses Skript befüllt die LearnOn Datenbank mit realistischen Beispieldaten
 -- für ein Gymnasium. Die Daten sind konsistent und ermöglichen die Beantwortung
 -- komplexer Abfragen zum Stundenplan.
 --
--- Besondere Merkmale der Testdaten:
--- - Realistische Verteilung von Lehrern, Fächern und Räumen
--- - Vollständiger Stundenplan für mehrere Lerngruppen
--- - Beispiele für Vertretungen und Ausfälle
--- - Fachraum-Zuordnungen (Chemie/Informatik in entsprechenden Fachräumen)
--- - Testdaten für spezifische Abfragen (Klasse 10B, freie Fachräume, etc.)
+-- KORREKTUREN GEGENÜBER URSPRÜNGLICHER VERSION:
+-- - Korrekte Tabellennamen (Lerngruppen_Kurse statt Lerngruppen)
+-- - Korrekte Zeitslot-Referenzen 
+-- - Behebung der VerweisAufStundeID-Probleme bei Vertretungen
+-- - Korrekte Reihenfolge der INSERTs
+-- - Auto-Increment Reset für vorhersagbare IDs
 --
 -- DBMS: MariaDB 
 -- ================================================================================
 
 USE LearnOn;
+
+-- Temporär Foreign Key Checks deaktivieren für sauberes Löschen und Einfügen
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Löschen aller vorhandenen Daten in korrekter Reihenfolge
+DELETE FROM Unterrichtsstunde;
+DELETE FROM Lehrer_Faecher;
+DELETE FROM Lerngruppen_Kurse;
+DELETE FROM Zeitslots;
+DELETE FROM Lehrer;
+DELETE FROM Faecher;
+DELETE FROM Raeume;
+DELETE FROM Gebaeude;
+
+-- Auto-Increment zurücksetzen für vorhersagbare IDs
+ALTER TABLE Gebaeude AUTO_INCREMENT = 1;
+ALTER TABLE Raeume AUTO_INCREMENT = 1;
+ALTER TABLE Faecher AUTO_INCREMENT = 1;
+ALTER TABLE Lehrer AUTO_INCREMENT = 1;
+ALTER TABLE Zeitslots AUTO_INCREMENT = 1;
+ALTER TABLE Lerngruppen_Kurse AUTO_INCREMENT = 1;
+ALTER TABLE Unterrichtsstunde AUTO_INCREMENT = 1;
+
+-- Foreign Key Checks wieder aktivieren
+SET FOREIGN_KEY_CHECKS = 1;
+
 -- Einfügen der Schulgebäude
 
 INSERT INTO Gebaeude (Name) VALUES 
@@ -155,10 +181,10 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     -- 3. Stunde Montag (ZeitSlotID 3)
     (3, 1, 8, 6, 13, 'Regel'),      -- 5A: Sport mit Bauer in Sporthalle 1
     (3, 5, 4, 4, 7, 'Regel'),       -- 10B: Chemie mit Prof. Neumann in Chemielabor 1 (Fachraum!)
-    (3, 9, 4, 4, 8, 'Regel'),       -- Q2-LK-CH-1: Chemie mit Prof. Neumann in Chemielabor 2
     
-    -- 4. Stunde Montag (ZeitSlotID 4)  
-    (4, 1, 6, 4, 4, 'Regel'),       -- 5A: Biologie mit Prof. Neumann in A202
+    -- 4. Stunde Montag (ZeitSlotID 4) - Q2 Chemie verlegt
+    
+    (4, 9, 4, 4, 8, 'Regel'),       -- Q2-LK-CH-1: Chemie mit Prof. Neumann in Chemielabor 2 (verlegt)
     (4, 5, 9, 8, 3, 'Regel'),       -- 10B: Geschichte mit Wolf in A201
     (4, 6, 2, 2, 5, 'Regel'),       -- Q1-LK-DE-1: Deutsch mit Schmidt in A301
     
@@ -224,34 +250,33 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     (27, 9, 4, 4, 7, 'Regel'),      -- Donnerstag 3.: Q2-LK-CH-1 mit Prof. Neumann
     (34, 1, 3, 9, 5, 'Regel');      -- Freitag 2.: 5A Englisch mit Braun
 
--- Beispiele für Vertretungen: Eine andere Lehrkraft übernimmt die Stunde
-
-INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ, VerweisAufStundeID) VALUES 
-    -- Vertretung 1: Dr. Müller (LehrerID 1) ist krank, Meyer (LehrerID 5) übernimmt
-    -- Originale Regel-Stunde: Mittwoch 1. Stunde, 10B Mathematik mit Dr. Müller (StundeID sollte 17 sein)
-    (17, 5, 1, 5, 2, 'Vertretung', 17),  -- Meyer übernimmt 10B Mathe in A102
-    
-    -- Vertretung 2: Weber (LehrerID 3) ist krank, Braun (LehrerID 9) übernimmt  
-    -- Originale Regel-Stunde: Donnerstag 3. Stunde sollte eine neue Regel-Stunde sein
-    (28, 4, 3, 3, 4, 'Regel'),           -- 28: Do 4. Stunde - Neue Regel-Stunde: 9A Englisch mit Weber in A202
-    (28, 4, 3, 9, 4, 'Vertretung', 
-        (SELECT StundeID FROM Unterrichtsstunde WHERE ZeitSlotID = 28 AND LerngruppeID = 4 AND Typ = 'Regel' LIMIT 1));
-
--- Da die Subquery in INSERT problematisch ist, erstelle ich die Regel-Stunden zuerst separat:
-
 -- Zusätzliche Regel-Stunden für Vertretungs-Beispiele
 INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ) VALUES 
-    (28, 4, 3, 3, 4, 'Regel');           -- StundeID wird ~50: Do 4. Stunde - 9A Englisch mit Weber
+    (28, 4, 3, 3, 4, 'Regel'),          -- Do 4. Stunde - 9A Englisch mit Weber
+    (29, 3, 8, 6, 13, 'Regel');         -- Do 5. Stunde - 8B Sport mit Bauer
 
--- Jetzt die Vertretung mit bekannter StundeID (angenommen StundeID 50)
-INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ, VerweisAufStundeID) VALUES 
-    (28, 4, 3, 9, 4, 'Vertretung', 50);  -- Braun übernimmt Webers Englischstunde
+-- ================================================================================
+-- SCHRITT 4: VERTRETUNGEN UND AUSFÄLLE (mit korrekten Verweisen)
+-- ================================================================================
 
--- Beispiele für Stundenausfälle
--- Zusätzliche Regel-Stunde für Ausfall-Beispiel
-INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ) VALUES 
-    (29, 3, 8, 6, 13, 'Regel');          -- StundeID wird ~52: Do 5. Stunde - 8B Sport mit Bauer
+-- Vertretungen und Ausfälle (Regel-Stunden werden durch Vertretungen ersetzt)
+-- Für Vertretungen müssen wir die ursprüngliche Regel-Stunde durch die Vertretung ersetzen
 
--- Ausfall dieser Sport-Stunde
-INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ, VerweisAufStundeID) VALUES 
-    (29, 3, 8, 6, 13, 'Ausfall', 52);    -- Sport-Stunde fällt aus (Bauer krank)
+-- Vertretung 1: Dr. Müller ist krank, Meyer übernimmt ihre Mathe-Stunde
+UPDATE Unterrichtsstunde 
+SET LehrerID = 5, Typ = 'Vertretung', VerweisAufStundeID = StundeID
+WHERE ZeitSlotID = 17 AND LerngruppeID = 5 AND FachID = 1 AND Typ = 'Regel';
+
+-- Vertretung 2: Weber ist verhindert, Braun übernimmt ihre Englischstunde  
+UPDATE Unterrichtsstunde 
+SET LehrerID = 9, Typ = 'Vertretung', VerweisAufStundeID = StundeID
+WHERE ZeitSlotID = 28 AND LerngruppeID = 4 AND FachID = 3 AND Typ = 'Regel';
+
+-- Ausfall: Bauer ist krank, Sport-Stunde fällt aus
+UPDATE Unterrichtsstunde 
+SET Typ = 'Ausfall', VerweisAufStundeID = StundeID
+WHERE ZeitSlotID = 29 AND LerngruppeID = 3 AND FachID = 8 AND Typ = 'Regel';
+
+-- ================================================================================
+-- ENDE - Datenbank erfolgreich mit korrigierten Testdaten befüllt
+-- ================================================================================
