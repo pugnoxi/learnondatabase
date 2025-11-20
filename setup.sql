@@ -457,3 +457,5 @@ GRANT SELECT ON LearnOn.LearnOn_OeffentlicherStundenplan TO 'LearnOn_Schueler';
 -- FROM INFORMATION_SCHEMA.APPLICABLE_ROLES ar
 -- WHERE ar.ROLE_NAME LIKE 'LearnOn_%'
 -- ORDER BY ar.GRANTEE, ar.ROLE_NAME;
+
+FLUSH PRIVILEGES;
