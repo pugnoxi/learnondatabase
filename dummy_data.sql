@@ -1,26 +1,13 @@
--- ================================================================================
--- LearnOn Stundenplan-Verwaltungssystem - Korrigierte Beispieldaten
--- ================================================================================
--- Dieses Skript befüllt die LearnOn Datenbank mit realistischen Beispieldaten
--- für ein Gymnasium. Die Daten sind konsistent und ermöglichen die Beantwortung
--- komplexer Abfragen zum Stundenplan.
---
--- KORREKTUREN GEGENÜBER URSPRÜNGLICHER VERSION:
--- - Korrekte Tabellennamen (Lerngruppen_Kurse statt Lerngruppen)
--- - Korrekte Zeitslot-Referenzen 
--- - Behebung der VerweisAufStundeID-Probleme bei Vertretungen
--- - Korrekte Reihenfolge der INSERTs
--- - Auto-Increment Reset für vorhersagbare IDs
---
--- DBMS: MariaDB 
--- ================================================================================
 
+-- LearnOn Stundenplan-Verwaltungssystem
+-- Dieses Skript befüllt die LearnOn Datenbank mit realistischen Beispieldaten
+-- für ein Gymnasium.
 USE LearnOn;
 
 -- Temporär Foreign Key Checks deaktivieren für sauberes Löschen und Einfügen
 SET FOREIGN_KEY_CHECKS = 0;
 
--- Löschen aller vorhandenen Daten in korrekter Reihenfolge
+-- Löschen aller vorhandenen Daten
 DELETE FROM Unterrichtsstunde;
 DELETE FROM Lehrer_Faecher;
 DELETE FROM Lerngruppen_Kurse;
@@ -42,14 +29,14 @@ ALTER TABLE Unterrichtsstunde AUTO_INCREMENT = 1;
 -- Foreign Key Checks wieder aktivieren
 SET FOREIGN_KEY_CHECKS = 1;
 
--- Einfügen der Schulgebäude
+-- Einfügen Schulgebäude
 
 INSERT INTO Gebaeude (Name) VALUES 
     ('Hauptgebäude'),        -- GebaeudeID 1: Haupttrakt mit Standard-Klassenzimmern
     ('Naturwissenschaften'), -- GebaeudeID 2: Fachräume für Chemie, Physik, Biologie
     ('Sporttrakt');          -- GebaeudeID 3: Sporthallen und Umkleiden
 
--- Einfügen verschiedener Raumtypen in die entsprechenden Gebäude
+-- Einfügen Raumtypen in die entsprechenden Gebäude
 
 INSERT INTO Raeume (GebaeudeID, Name, Typ) VALUES 
     -- Hauptgebäude: Standard-Klassenzimmer
@@ -60,7 +47,7 @@ INSERT INTO Raeume (GebaeudeID, Name, Typ) VALUES
     (1, 'A301', 'Standard'),     -- RaumID 5
     (1, 'B101', 'Standard'),     -- RaumID 6
     
-    -- Naturwissenschaften: Fachräume
+    -- Naturwissenschaften: Fachräuume
     (2, 'CH1', 'Chemie'),        -- RaumID 7: Chemielabor 1
     (2, 'CH2', 'Chemie'),        -- RaumID 8: Chemielabor 2
     (2, 'PH1', 'Physik'),        -- RaumID 9: Physikraum
@@ -73,7 +60,7 @@ INSERT INTO Raeume (GebaeudeID, Name, Typ) VALUES
     (3, 'SH2', 'Sport'),         -- RaumID 14: Sporthalle 2
     (1, 'AULA', 'Aula');         -- RaumID 15: Aula im Hauptgebäude
 
--- Einfügen der Unterrichtsfächer mit Fachraum-Anforderungen
+-- Einfügen Unterrichtsfächer mit Fachraum-Anforderungen
 
 INSERT INTO Faecher (Kuerzel, Name, IstFachraumErforderlich) VALUES 
     ('MA', 'Mathematik', FALSE),        -- FachID 1: Standard-Raum ausreichend
@@ -90,7 +77,7 @@ INSERT INTO Faecher (Kuerzel, Name, IstFachraumErforderlich) VALUES
     ('MU', 'Musik', FALSE);             -- FachID 12: Standard-Raum ausreichend
 
 
--- Einfügen der Lehrkräfte mit realistischen Kürzeln und Namen
+-- Einfügen Lehrkräfte mit Kürzeln und Namen
 
 INSERT INTO Lehrer (Kuerzel, Name) VALUES 
     ('MUE', 'Dr. Maria Müller'),        -- LehrerID 1: Mathematik/Physik
@@ -105,7 +92,7 @@ INSERT INTO Lehrer (Kuerzel, Name) VALUES
     ('FIS', 'Robert Fischer');          -- LehrerID 10: Sport/Physik
 
 
--- Many-to-Many Verknüpfung: Welcher Lehrer unterrichtet welche Fächer
+-- Many-to-Many Verknüpfung
 
 INSERT INTO Lehrer_Faecher (LehrerID, FachID) VALUES 
     -- Dr. Müller: Mathematik und Physik
@@ -129,7 +116,7 @@ INSERT INTO Lehrer_Faecher (LehrerID, FachID) VALUES
     -- Fischer: Sport und Physik
     (10, 8), (10, 5);
 
--- Erstellen des Schulzeit-Rasters: Montag bis Freitag, 1. bis 8. Stunde
+-- Erstellen des Schulzeit-Rastrers: Montag bis Freitag, 1. bis 8. Stunde
 
 INSERT INTO Zeitslots (Wochentag, Stunde) VALUES 
     -- Montag (Wochentag 1)
@@ -144,17 +131,15 @@ INSERT INTO Zeitslots (Wochentag, Stunde) VALUES
     (5, 1), (5, 2), (5, 3), (5, 4), (5, 5), (5, 6), (5, 7), (5, 8);
 
 
--- Einfügen von Klassen (Sekundarstufe I) und Kursen (Sekundarstufe II)
+-- Einfügen von Klassen und Kursen
 
 INSERT INTO Lerngruppen_Kurse (Name, Typ, Jahrgangsstufe) VALUES 
-    -- Sekundarstufe I: Klassen
     ('5A', 'Klasse', 5),             -- LerngruppeID 1
     ('7C', 'Klasse', 7),             -- LerngruppeID 2
     ('8B', 'Klasse', 8),             -- LerngruppeID 3
     ('9A', 'Klasse', 9),             -- LerngruppeID 4
-    ('10B', 'Klasse', 10),           -- LerngruppeID 5: Wichtig für Testabfrage!
+    ('10B', 'Klasse', 10),           -- LerngruppeID 5 
     
-    -- Sekundarstufe II: Kurse
     ('Q1-LK-DE-1', 'Kurs', 11),     -- LerngruppeID 6: Q1 Deutsch Leistungskurs
     ('Q1-LK-MA-1', 'Kurs', 11),     -- LerngruppeID 7: Q1 Mathe Leistungskurs
     ('Q1-GK-EN-2', 'Kurs', 11),     -- LerngruppeID 8: Q1 Englisch Grundkurs
@@ -163,15 +148,15 @@ INSERT INTO Lerngruppen_Kurse (Name, Typ, Jahrgangsstufe) VALUES
     ('Q2-GK-IF-1', 'Kurs', 12);     -- LerngruppeID 11: Q2 Informatik Grundkurs
 
 
--- Erstellen eines realistischen Stundenplans mit allen Regel-Stunden
+-- Erstelle realistischen Stundenplanns mit allen Regel-Stunden
 
 INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumID, Typ) VALUES 
-    -- ===== MONTAG (ZeitSlotID 1-8) =====
-    
+    -- MONTAG (ZeitSlotID 1-8)
+ 
     -- 1. Stunde Montag (ZeitSlotID 1)
     (1, 1, 1, 1, 1, 'Regel'),       -- 5A: Mathematik mit Dr. Müller in A101
     (1, 2, 2, 2, 2, 'Regel'),       -- 7C: Deutsch mit Schmidt in A102
-    (1, 5, 3, 3, 3, 'Regel'),       -- 10B: Englisch mit Weber in A201 (wichtig für Testabfrage!)
+    (1, 5, 3, 3, 3, 'Regel'),       -- 10B: Englisch mit Weber in A201 
     
     -- 2. Stunde Montag (ZeitSlotID 2)
     (2, 1, 2, 7, 1, 'Regel'),       -- 5A: Deutsch mit Koch in A101
@@ -180,7 +165,7 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     
     -- 3. Stunde Montag (ZeitSlotID 3)
     (3, 1, 8, 6, 13, 'Regel'),      -- 5A: Sport mit Bauer in Sporthalle 1
-    (3, 5, 4, 4, 7, 'Regel'),       -- 10B: Chemie mit Prof. Neumann in Chemielabor 1 (Fachraum!)
+    (3, 5, 4, 4, 7, 'Regel'),       -- 10B: Chemie mit Prof. Neumann in Chemielabor 1 
     
     -- 4. Stunde Montag (ZeitSlotID 4) - Q2 Chemie verlegt
     
@@ -192,7 +177,7 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     (5, 2, 8, 10, 14, 'Regel'),     -- 7C: Sport mit Fischer in Sporthalle 2
     (5, 5, 6, 6, 10, 'Regel'),      -- 10B: Biologie mit Bauer in Biologieraum
     
-    -- ===== DIENSTAG (ZeitSlotID 9-16) =====
+    -- DIENSTAG (ZeitSlotID 9-16) 
     
     -- 1. Stunde Dienstag (ZeitSlotID 9)
     (9, 5, 2, 2, 1, 'Regel'),       -- 10B: Deutsch mit Schmidt in A101
@@ -218,7 +203,7 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     -- 6. Stunde Dienstag (ZeitSlotID 14)
     (14, 5, 10, 8, 1, 'Regel'),     -- 10B: Erdkunde mit Wolf in A101
     
-    -- ===== MITTWOCH (ZeitSlotID 17-24) =====
+    -- MITTWOCH (ZeitSlotID 17-24) 
     
     -- 1. Stunde Mittwoch (ZeitSlotID 17)
     (17, 5, 1, 1, 2, 'Regel'),      -- 10B: Mathematik mit Dr. Müller in A102
@@ -226,10 +211,10 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     -- 2. Stunde Mittwoch (ZeitSlotID 18) 
     (18, 5, 3, 3, 2, 'Regel'),      -- 10B: Englisch mit Weber in A102
     
-    -- 3. Stunde Mittwoch (ZeitSlotID 19)
+    -- 3. Stunde Mittwocdh (ZeitSlotID 19)
     (19, 5, 7, 5, 12, 'Regel'),     -- 10B: Informatik mit Meyer in IT2 (Fachraum!)
     
-    -- ===== DONNERSTAG (ZeitSlotID 25-32) =====
+    -- DONNERSTAG (ZeitSlotID 25-32) 
     
     -- 1. Stunde Donnerstag (ZeitSlotID 25)
     (25, 5, 2, 7, 3, 'Regel'),      -- 10B: Deutsch mit Koch in A201
@@ -237,7 +222,7 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     -- 2. Stunde Donnerstag (ZeitSlotID 26)
     (26, 5, 12, 9, 3, 'Regel'),     -- 10B: Musik mit Braun in A201
     
-    -- ===== FREITAG (ZeitSlotID 33-40) =====
+    -- FREITAG (ZeitSlotID 33-40) 
     
     -- 1. Stunde Freitag (ZeitSlotID 33)
     (33, 5, 5, 1, 9, 'Regel'),      -- 10B: Physik mit Dr. Müller in Physikraum
@@ -255,14 +240,13 @@ INSERT INTO Unterrichtsstunde (ZeitSlotID, LerngruppeID, FachID, LehrerID, RaumI
     (28, 4, 3, 3, 4, 'Regel'),          -- Do 4. Stunde - 9A Englisch mit Weber
     (29, 3, 8, 6, 13, 'Regel');         -- Do 5. Stunde - 8B Sport mit Bauer
 
--- ================================================================================
 -- SCHRITT 4: VERTRETUNGEN UND AUSFÄLLE (mit korrekten Verweisen)
--- ================================================================================
 
--- Vertretungen und Ausfälle (Regel-Stunden werden durch Vertretungen ersetzt)
+
+-- Vertretungen und Ausfällle (Regel-Stunden werden durch Vertretungen ersetzt)
 -- Für Vertretungen müssen wir die ursprüngliche Regel-Stunde durch die Vertretung ersetzen
 
--- Vertretung 1: Dr. Müller ist krank, Meyer übernimmt ihre Mathe-Stunde
+-- Vertretung 1: Dr. Müller ist krank,, Meyer übernimmt ihre Mathe-Stunde
 UPDATE Unterrichtsstunde 
 SET LehrerID = 5, Typ = 'Vertretung', VerweisAufStundeID = StundeID
 WHERE ZeitSlotID = 17 AND LerngruppeID = 5 AND FachID = 1 AND Typ = 'Regel';
@@ -277,6 +261,3 @@ UPDATE Unterrichtsstunde
 SET Typ = 'Ausfall', VerweisAufStundeID = StundeID
 WHERE ZeitSlotID = 29 AND LerngruppeID = 3 AND FachID = 8 AND Typ = 'Regel';
 
--- ================================================================================
--- ENDE - Datenbank erfolgreich mit korrigierten Testdaten befüllt
--- ================================================================================

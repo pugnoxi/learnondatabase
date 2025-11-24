@@ -1,6 +1,4 @@
--- ================================================================================
 -- LearnOn Stundenplan-Verwaltungssystem - Datenbankstruktur
--- ================================================================================
 -- Dieses Skript erstellt die gesamte Datenbankstruktur für ein relationales Datenbanksystem zur Verwaltung von Stundenplänen eines Gymnasiums (Jahrgangsstufen 5-12).
 --
 -- Kernfunktionalitäten:
@@ -9,7 +7,7 @@
 -- - Vertretungs- und Ausfalllogik mit Verweis auf ursprüngliche Regel-Stunden
 --
 -- DBMS: MariaDB
--- ================================================================================
+
 
 -- Datenbank neu erstellen (falls vorhanden, verherige Datenbank löschen)
 DROP DATABASE IF EXISTS LearnOn;
@@ -149,9 +147,7 @@ CREATE TABLE Unterrichtsstunde (
     FOREIGN KEY (VerweisAufStundeID) REFERENCES Unterrichtsstunde(StundeID) 
         ON DELETE RESTRICT ON UPDATE CASCADE,
     
-    -- ============================================================================
-    -- KONFLIKTPRÄVENTIONS-CONSTRAINTS ERKLÄRUNG
-    -- ============================================================================
+ 
     -- Diese Unique Constraints verhindern Doppelbuchungen zur gleichen Zeit:
     -- 
     -- HINWEIS: Diese Constraints gelten für alle Stundentypen. In der Praxis 
@@ -185,20 +181,16 @@ CREATE ROLE IF NOT EXISTS 'LearnOn_Vertretungs_Verwalter';
 
 -- SCHRITT 2: BERECHTIGUNGEN PRO ROLLE DEFINIEREN
 
--- ========================================
--- ADMIN_ROLLE: Vollzugriff auf alles
--- ========================================
--- Vollzugriff auf alle Tabellen
-GRANT ALL PRIVILEGES ON LearnOn.* TO 'LearnOn_Admin';
 
+-- ADMIN_ROLLE: Vollzugriff auf alles
+GRANT ALL PRIVILEGES ON LearnOn.* TO 'LearnOn_Admin';
 -- Berechtigung zum Verwalten anderer Benutzer
 GRANT CREATE USER ON *.* TO 'LearnOn_Admin';
 GRANT RELOAD ON *.* TO 'LearnOn_Admin';
 
 
--- ========================================
+
 -- STUNDENPLAN_VERWALTER: Vollzugriff auf Schulbetrieb
--- ========================================
 -- Vollzugriff auf alle fachlichen Tabellen
 GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Gebaeude TO 'LearnOn_Stundenplan_Verwalter';
 GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Raeume TO 'LearnOn_Stundenplan_Verwalter';
@@ -210,9 +202,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Lerngruppen_Kurse TO 'LearnOn_St
 GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Unterrichtsstunde TO 'LearnOn_Stundenplan_Verwalter';
 
 
--- ========================================
+
 -- LEHRER_ROLLE: Lesezugriff + eingeschränkte Änderungen
--- ========================================
 -- Lesezugriff auf Stammdaten
 GRANT SELECT ON LearnOn.Gebaeude TO 'LearnOn_Lehrer';
 GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Lehrer';
@@ -225,24 +216,20 @@ GRANT SELECT ON LearnOn.Unterrichtsstunde TO 'LearnOn_Lehrer';
 
 -- Lehrer können ihre eigenen Kontaktdaten aktualisieren
 GRANT UPDATE (Name) ON LearnOn.Lehrer TO 'LearnOn_Lehrer';
--- ========================================
--- SCHUELER_ROLLE: Nur Lesezugriff auf öffentliche Daten
--- ========================================
 
+-- SCHUELER_ROLLE: Nur Lesezugriff auf öffentliche Daten
 -- Nur Lesezugriff auf für Schüler relevante Informationen
 GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Schueler';
 GRANT SELECT ON LearnOn.Faecher TO 'LearnOn_Schueler';
 GRANT SELECT ON LearnOn.Zeitslots TO 'LearnOn_Schueler';
 GRANT SELECT ON LearnOn.Lerngruppen_Kurse TO 'LearnOn_Schueler';
 GRANT SELECT ON LearnOn.Unterrichtsstunde TO 'LearnOn_Schueler';
-
 -- Eingeschränkte Lehrerdaten (nur Kürzel, nicht private Daten)
 GRANT SELECT (LehrerID, Kuerzel) ON LearnOn.Lehrer TO 'LearnOn_Schueler';
 
 
--- ========================================
+
 -- VERTRETUNGS_VERWALTER: Spezialzugriff für Vertretungen
--- ========================================
 -- Lesezugriff auf alle Stammdaten
 GRANT SELECT ON LearnOn.Gebaeude TO 'LearnOn_Vertretungs_Verwalter';
 GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Vertretungs_Verwalter';
@@ -256,9 +243,7 @@ GRANT SELECT ON LearnOn.Lerngruppen_Kurse TO 'LearnOn_Vertretungs_Verwalter';
 GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Unterrichtsstunde TO 'LearnOn_Vertretungs_Verwalter';
 
 
--- ********************************************************************************
 -- SCHRITT 3: SICHERHEITS-VIEWS FÜR DATENSCHUTZ
--- ********************************************************************************
 -- View für Lehrkräfte: Nur eigene Stunden einsehen
 CREATE VIEW LearnOn_MeineStunden AS
 SELECT 
@@ -309,13 +294,10 @@ FROM Unterrichtsstunde u
     INNER JOIN Raeume r ON u.RaumID = r.RaumID
 WHERE 
     u.Typ IN ('Regel', 'Vertretung');
--- ********************************************************************************
--- SCHRITT 4: BENUTZERKONTEN ERSTELLEN (ohne Passwort)
--- ********************************************************************************
--- ========================================
--- ADMINISTRATIVE BENUTZER
--- ========================================
 
+-- SCHRITT 4: BENUTZERKONTEN ERSTELLEN (ohne Passwort)
+
+-- ADMINISTRATIVE BENUTZER
 -- Systemadministrator
 CREATE USER IF NOT EXISTS 'admin_system'@'localhost';
 GRANT 'LearnOn_Admin' TO 'admin_system'@'localhost';
@@ -327,10 +309,8 @@ GRANT 'LearnOn_Stundenplan_Verwalter' TO 'schulleitung_mueller'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Stundenplan_Verwalter' FOR 'schulleitung_mueller'@'localhost';
 
 
--- ========================================
--- SEKRETARIAT UND VERWALTUNG
--- ========================================
 
+-- SEKRETARIAT UND VERWALTUNG
 -- Sekretariat (Stundenplan-Verwaltung)
 CREATE USER IF NOT EXISTS 'sekretariat_weber'@'localhost';
 GRANT 'LearnOn_Stundenplan_Verwalter' TO 'sekretariat_weber'@'localhost';
@@ -342,10 +322,7 @@ GRANT 'LearnOn_Vertretungs_Verwalter' TO 'vertretung_schmidt'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Vertretungs_Verwalter' FOR 'vertretung_schmidt'@'localhost';
 
 
--- ========================================
 -- LEHRKRÄFTE (Beispiele aus der Datenbank)
--- ========================================
-
 -- Dr. Maria Müller (Mathematik/Physik)
 CREATE USER IF NOT EXISTS 'lehrer_mue'@'localhost';
 GRANT 'LearnOn_Lehrer' TO 'lehrer_mue'@'localhost';
@@ -367,9 +344,7 @@ GRANT 'LearnOn_Lehrer' TO 'lehrer_neu'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_neu'@'localhost';
 
 
--- ========================================
 -- SCHÜLER UND ELTERN (Beispiele)
--- ========================================
 -- Schülervertreter
 CREATE USER IF NOT EXISTS 'schueler_sv'@'localhost';
 GRANT 'LearnOn_Schueler' TO 'schueler_sv'@'localhost';
@@ -386,9 +361,7 @@ GRANT 'LearnOn_Schueler' TO 'web_portal'@'localhost';
 SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'web_portal'@'localhost';
 
 
--- ********************************************************************************
 -- SCHRITT 5: BERECHTIGUNGEN AUF VIEWS VERGEBEN
--- ********************************************************************************
 -- Lehrkräfte dürfen ihre eigenen Stunden einsehen
 GRANT SELECT ON LearnOn.LearnOn_MeineStunden TO 'LearnOn_Lehrer';
 
