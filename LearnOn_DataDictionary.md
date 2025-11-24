@@ -23,7 +23,7 @@
 | RaumID | INT | - | - | AUTO_INCREMENT | N | PK | Eindeutiger Primärschlüssel des Raums |
 | GebaeudeID | INT | - | - | - | N | FK | Verweis auf das Gebäude, in dem sich der Raum befindet |
 | Name | VARCHAR | 20 | 'A101' | - | N | - | Raumbezeichnung (z.B. 'A101', 'Chemielabor') |
-| Typ | VARCHAR | 30 | 'Standard' | NULL | J | - | Raumtyp zur Klassifizierung (z.B. 'Standard', 'IT', 'Chemie', 'Physik', 'Sport') |
+| Typ | VARCHAR | 30 | 'Standard' | NULL | J | - | Raumtyp zur Klassifizierung |
 
 **Foreign Keys:**
 - GebaeudeID → Gebaeude(GebaeudeID) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -142,25 +142,5 @@
 **Zweck:** Anonymisierte Sicht auf Stundenpläne für Schüler und Eltern.
 
 **Beschreibung:** Diese View zeigt Stundenplan-Informationen ohne private Lehrerdaten (nur Kürzel, keine vollständigen Namen). Verwendet für öffentlich zugängliche Stundenplan-Anzeigen.
-
----
-
-## Datenintegrität und Constraints
-
-### Referenzielle Integrität
-Alle Foreign Key Beziehungen sind mit `ON DELETE RESTRICT` und `ON UPDATE CASCADE` definiert, um Dateninkonsistenzen zu vermeiden.
-
-### Eindeutigkeit
-- Gebäude haben eindeutige Namen
-- Lehrer haben eindeutige Kürzel  
-- Fächer haben eindeutige Kürzel
-- Lerngruppen haben eindeutige Namen
-- Zeitslots sind eindeutig durch Wochentag/Stunde-Kombination
-
-### Konfliktprävention
-Das System verhindert durch Unique Constraints:
-- Doppelbuchung von Lehrern zur gleichen Zeit
-- Doppelbelegung von Räumen zur gleichen Zeit  
-- Mehrfachbelegung von Lerngruppen zur gleichen Zeit
 
 ---
