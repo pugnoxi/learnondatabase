@@ -1,9 +1,7 @@
 -- ================================================================================
 -- LearnOn Stundenplan-Verwaltungssystem - Datenbankstruktur
 -- ================================================================================
--- Dieses Skript erstellt die gesamte Datenbankstruktur für das LearnOn System,
--- ein relationales Datenbanksystem zur Verwaltung von Stundenplänen eines 
--- Gymnasiums (Jahrgangsstufen 5-13).
+-- Dieses Skript erstellt die gesamte Datenbankstruktur für ein relationales Datenbanksystem zur Verwaltung von Stundenplänen eines Gymnasiums (Jahrgangsstufen 5-12).
 --
 -- Kernfunktionalitäten:
 -- - Zentrale Verwaltung von Unterrichtsstunden (Wer, Was, Wann, Wo)
@@ -19,23 +17,23 @@ CREATE DATABASE LearnOn;
 USE LearnOn;
 
 /*
- * Speichert alle Gebäude der Schule.
- * Jedes Gebäude hat einen eindeutigen Namen und dient als Standort für Räume.
+ * Beinhält alle Gebäude der Schule.
+ * Jedes Gebäude hat eindeutigen Namen und dient als übergeordneter Standort für Räume.
  */
 CREATE TABLE Gebaeude (
     GebaeudeID INT AUTO_INCREMENT PRIMARY KEY, -- Eindeutige ID des Gebäudes
-    Name VARCHAR(50) NOT NULL UNIQUE           -- Name des Gebäudes (z.B. 'Hauptgebäude', 'Sporthalle')
+    Name VARCHAR(50) NOT NULL UNIQUE           -- Name des Gebäudes
 ) ENGINE=InnoDB;
 
 /*
- * Speichert alle Räume der Schule mit ihrer Zuordnung zu Gebäuden.
+ * Beinhält alle Räume der Schule mit ihrer Zuordnung zu Gebäuden.
  * Jeder Raum hat einen Typ, der angibt, für welche Art von Unterricht er geeignet ist.
  */
 CREATE TABLE Raeume (
     RaumID INT AUTO_INCREMENT PRIMARY KEY,     -- Eindeutige ID des Raums
     GebaeudeID INT NOT NULL,                   -- Verweis auf das Gebäude
-    Name VARCHAR(20) NOT NULL,                 -- Raumbezeichnung (z.B. 'A101', 'Chemielabor')
-    Typ VARCHAR(30),                           -- Raumtyp (z.B. 'Standard', 'IT', 'Chemie', 'Physik')
+    Name VARCHAR(20) NOT NULL,                 -- Raumbezeichnung 
+    Typ VARCHAR(30),                           -- Raumtyp
     
     -- Foreign Key Constraints
     FOREIGN KEY (GebaeudeID) REFERENCES Gebaeude(GebaeudeID) 
@@ -44,7 +42,7 @@ CREATE TABLE Raeume (
 
 
 /*
- * Speichert alle Lehrkräfte der Schule.
+ * Beinhält alle Lehrkräfte der Schule.
  * Jede Lehrkraft hat ein eindeutiges Kürzel für die Stundenplanung.
  */
 CREATE TABLE Lehrer (
@@ -55,8 +53,8 @@ CREATE TABLE Lehrer (
 
 
 /*
- * Speichert alle Unterrichtsfächer der Schule.
- * Das Flag 'IstFachraumErforderlich' gibt an, ob für das Fach ein spezieller
+ * Beinhält alle Unterrichtsfächer der Schule.
+ * Das Flag 'IstFachraumErforderlich' gibt an, ob das Fach einen speziellen
  * Fachraum benötigt wird (z.B. Chemielabor für Chemie).
  */
 CREATE TABLE Faecher (
@@ -68,7 +66,6 @@ CREATE TABLE Faecher (
 
 
 /*
- * Many-to-Many Verknüpfung zwischen Lehrern und Fächern.
  * Definiert, welche Lehrkraft welche Fächer unterrichten darf/kann.
  */
 CREATE TABLE Lehrer_Faecher (
@@ -87,7 +84,7 @@ CREATE TABLE Lehrer_Faecher (
 
 
 /*
- * Definiert das Zeitraster der Schule.
+ * Definiert Zeitraster.
  * Jeder Zeitslot ist eine eindeutige Kombination aus Wochentag und Stunde.
  * Wochentag: 1=Montag, 2=Dienstag, 3=Mittwoch, 4=Donnerstag, 5=Freitag
  * Stunde: 1=1. Stunde, 2=2. Stunde, etc.
@@ -103,28 +100,28 @@ CREATE TABLE Zeitslots (
 
 
 /*
- * Speichert alle Lerngruppen der Schule (Klassen und Kurse).
+ * Speichert Lerngruppen der Schule (Klassen und Kurse).
  * Unterscheidet zwischen festen Klassen (z.B. '10B') und 
  * Kursen der Oberstufe (z.B. 'Q1-LK-DE-1').
  */
 CREATE TABLE Lerngruppen_Kurse (
     LerngruppeID INT AUTO_INCREMENT PRIMARY KEY, -- Eindeutige ID der Lerngruppe
     Name VARCHAR(20) NOT NULL UNIQUE,           -- Name der Lerngruppe (z.B. '10B', 'Q1-LK-DE-1')
-    Typ ENUM('Klasse', 'Kurs') NOT NULL,        -- Art der Lerngruppe
-    Jahrgangsstufe INT                          -- Jahrgangsstufe (5-13)
+    Typ ENUM('Klasse', 'Kurs') NOT NULL,        -- Art Lerngruppe
+    Jahrgangsstufe INT                          -- Jahrgangsstufe (5-12)
 ) ENGINE=InnoDB;
 
 
 /*
- * Die zentrale Tabelle des Systems. Speichert alle Unterrichtsstunden mit
- * vollständiger Information: Wer unterrichtet was, wann und wo.
+ * zentrale Tabelle des Systems. Speichert alle Unterrichtsstunden mit
+ * vollständiger Info: Wer unterrichtet was, wann und wo.
  * 
  * Unterstützt drei Arten von Stunden:
  * - 'Regel': Normale, regelmäßige Unterrichtsstunden
  * - 'Vertretung': Vertretungsstunden (verweisen auf ursprüngliche Regel-Stunde)
  * - 'Ausfall': Ausgefallene Stunden (verweisen auf ursprüngliche Regel-Stunde)
  * 
- * WICHTIGE CONSTRAINTS:
+ * wichtige ConstraintS:
  * - Verhindert Doppelbuchungen von Lehrern, Räumen und Lerngruppen
  * - Stellt referenzielle Integrität über alle Dimensionen sicher
  */
@@ -153,7 +150,7 @@ CREATE TABLE Unterrichtsstunde (
         ON DELETE RESTRICT ON UPDATE CASCADE,
     
     -- ============================================================================
-    -- KONFLIKTPRÄVENTIONS-CONSTRAINTS
+    -- KONFLIKTPRÄVENTIONS-CONSTRAINTS ERKLÄRUNG
     -- ============================================================================
     -- Diese Unique Constraints verhindern Doppelbuchungen zur gleichen Zeit:
     -- 
@@ -161,7 +158,7 @@ CREATE TABLE Unterrichtsstunde (
     -- sollten Ausfälle ('Ausfall') diese Constraints nicht blockieren, da sie
     -- keine echten Belegungen darstellen. MariaDB unterstützt jedoch keine 
     -- partiellen Unique Constraints mit WHERE-Bedingungen. Eine vollständige
-    -- Lösung würde Check-Constraints oder Trigger erfordern.
+    -- Lösung würde Check-Constraints oder Trigger erfordern. Funktioniert hier nicht.
     
     UNIQUE (LehrerID, ZeitSlotID),     -- Ein Lehrer kann nicht zur gleichen Zeit mehrere Stunden haben
     UNIQUE (RaumID, ZeitSlotID),         -- Ein Raum kann nicht zur gleichen Zeit mehrfach belegt sein
@@ -169,36 +166,7 @@ CREATE TABLE Unterrichtsstunde (
 ) ENGINE=InnoDB;
 
 
--- ================================================================================
--- BERECHTIGUNGSKONZEPT FÜR DAS STUNDENPLAN-SYSTEM
--- ================================================================================
-
--- ********************************************************************************
--- ROLLEN-DEFINITION UND BEGRÜNDUNG
--- ********************************************************************************
-
-/*
-BERECHTIGUNGSKONZEPT - ÜBERBLICK:
-
-Das Berechtigungskonzept folgt dem Prinzip der minimalen Rechte (Principle of Least Privilege)
-und berücksichtigt die verschiedenen Nutzergruppen einer Schule:
-
-1. ADMIN_ROLLE: Vollzugriff für Systemadministratoren
-2. STUNDENPLAN_VERWALTER: Schreibzugriff für Stundenplan-Verwaltung
-3. LEHRER: Lesezugriff auf eigene Stunden und allgemeine Pläne
-4. SCHUELER: Eingeschränkter Lesezugriff nur auf öffentliche Informationen
-5. VERTRETUNGS_VERWALTER: Spezielle Rechte für Vertretungsplan-Management
-
-Sicherheitsprinzipien:
-- Rollenbasierte Zugriffskontrolle (RBAC)
-- Datenschutz durch minimale Sichtbarkeit
-- Auditierbarkeit durch benannte Benutzerkonten
-*/
-
--- ********************************************************************************
 -- SCHRITT 1: ROLLEN ERSTELLEN
--- ********************************************************************************
-
 -- Administrative Vollzugriffs-Rolle
 CREATE ROLE IF NOT EXISTS 'LearnOn_Admin';
 
@@ -215,14 +183,11 @@ CREATE ROLE IF NOT EXISTS 'LearnOn_Schueler';
 CREATE ROLE IF NOT EXISTS 'LearnOn_Vertretungs_Verwalter';
 
 
--- ********************************************************************************
 -- SCHRITT 2: BERECHTIGUNGEN PRO ROLLE DEFINIEREN
--- ********************************************************************************
 
 -- ========================================
 -- ADMIN_ROLLE: Vollzugriff auf alles
 -- ========================================
-
 -- Vollzugriff auf alle Tabellen
 GRANT ALL PRIVILEGES ON LearnOn.* TO 'LearnOn_Admin';
 
@@ -234,7 +199,6 @@ GRANT RELOAD ON *.* TO 'LearnOn_Admin';
 -- ========================================
 -- STUNDENPLAN_VERWALTER: Vollzugriff auf Schulbetrieb
 -- ========================================
-
 -- Vollzugriff auf alle fachlichen Tabellen
 GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Gebaeude TO 'LearnOn_Stundenplan_Verwalter';
 GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Raeume TO 'LearnOn_Stundenplan_Verwalter';
@@ -249,7 +213,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Unterrichtsstunde TO 'LearnOn_St
 -- ========================================
 -- LEHRER_ROLLE: Lesezugriff + eingeschränkte Änderungen
 -- ========================================
-
 -- Lesezugriff auf Stammdaten
 GRANT SELECT ON LearnOn.Gebaeude TO 'LearnOn_Lehrer';
 GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Lehrer';
@@ -262,8 +225,6 @@ GRANT SELECT ON LearnOn.Unterrichtsstunde TO 'LearnOn_Lehrer';
 
 -- Lehrer können ihre eigenen Kontaktdaten aktualisieren
 GRANT UPDATE (Name) ON LearnOn.Lehrer TO 'LearnOn_Lehrer';
-
-
 -- ========================================
 -- SCHUELER_ROLLE: Nur Lesezugriff auf öffentliche Daten
 -- ========================================
@@ -282,7 +243,6 @@ GRANT SELECT (LehrerID, Kuerzel) ON LearnOn.Lehrer TO 'LearnOn_Schueler';
 -- ========================================
 -- VERTRETUNGS_VERWALTER: Spezialzugriff für Vertretungen
 -- ========================================
-
 -- Lesezugriff auf alle Stammdaten
 GRANT SELECT ON LearnOn.Gebaeude TO 'LearnOn_Vertretungs_Verwalter';
 GRANT SELECT ON LearnOn.Raeume TO 'LearnOn_Vertretungs_Verwalter';
@@ -299,7 +259,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON LearnOn.Unterrichtsstunde TO 'LearnOn_Ve
 -- ********************************************************************************
 -- SCHRITT 3: SICHERHEITS-VIEWS FÜR DATENSCHUTZ
 -- ********************************************************************************
-
 -- View für Lehrkräfte: Nur eigene Stunden einsehen
 CREATE VIEW LearnOn_MeineStunden AS
 SELECT 
@@ -350,12 +309,9 @@ FROM Unterrichtsstunde u
     INNER JOIN Raeume r ON u.RaumID = r.RaumID
 WHERE 
     u.Typ IN ('Regel', 'Vertretung');
-
-
 -- ********************************************************************************
 -- SCHRITT 4: BENUTZERKONTEN ERSTELLEN (ohne Passwort)
 -- ********************************************************************************
-
 -- ========================================
 -- ADMINISTRATIVE BENUTZER
 -- ========================================
@@ -414,7 +370,6 @@ SET DEFAULT ROLE 'LearnOn_Lehrer' FOR 'lehrer_neu'@'localhost';
 -- ========================================
 -- SCHÜLER UND ELTERN (Beispiele)
 -- ========================================
-
 -- Schülervertreter
 CREATE USER IF NOT EXISTS 'schueler_sv'@'localhost';
 GRANT 'LearnOn_Schueler' TO 'schueler_sv'@'localhost';
@@ -434,28 +389,10 @@ SET DEFAULT ROLE 'LearnOn_Schueler' FOR 'web_portal'@'localhost';
 -- ********************************************************************************
 -- SCHRITT 5: BERECHTIGUNGEN AUF VIEWS VERGEBEN
 -- ********************************************************************************
-
 -- Lehrkräfte dürfen ihre eigenen Stunden einsehen
 GRANT SELECT ON LearnOn.LearnOn_MeineStunden TO 'LearnOn_Lehrer';
 
 -- Schüler/Eltern dürfen öffentlichen Stundenplan einsehen  
 GRANT SELECT ON LearnOn.LearnOn_OeffentlicherStundenplan TO 'LearnOn_Schueler';
-
-
--- ********************************************************************************
--- VALIDIERUNGS-QUERIES FÜR BERECHTIGUNGSKONZEPT
--- ********************************************************************************
-
--- Anzeige aller erstellten Rollen
--- SELECT ROLE AS Rollenname, IS_DEFAULT AS Standard_Rolle
--- FROM INFORMATION_SCHEMA.APPLICABLE_ROLES 
--- WHERE GRANTEE LIKE 'LearnOn_%'
--- ORDER BY ROLE;
-
--- Anzeige aller Benutzer mit ihren Rollen
--- SELECT ar.GRANTEE AS Benutzer, ar.ROLE_NAME AS Rolle, ar.IS_GRANTABLE AS Kann_Vergeben
--- FROM INFORMATION_SCHEMA.APPLICABLE_ROLES ar
--- WHERE ar.ROLE_NAME LIKE 'LearnOn_%'
--- ORDER BY ar.GRANTEE, ar.ROLE_NAME;
 
 FLUSH PRIVILEGES;

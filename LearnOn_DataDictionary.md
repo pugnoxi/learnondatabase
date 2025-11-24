@@ -1,23 +1,5 @@
 # LearnOn Stundenplan-Verwaltungssystem
-## Data Dictionary
-
-**Projektname:** LearnOn Stundenplan-Verwaltungssystem  
-**Version:** 1.0  
-**Datum:** Dezember 2024  
-**DBMS:** MariaDB  
-**Schema:** LearnOn  
-
----
-
-## Übersicht
-
-Das LearnOn-System ist ein relationales Datenbanksystem zur Verwaltung von Stundenplänen eines Gymnasiums (Jahrgangsstufen 5-13). Das System verwaltet zentral alle Unterrichtsstunden mit vollständiger Information über Wer, Was, Wann und Wo unterrichtet wird.
-
-**Kernfunktionalitäten:**
-- Zentrale Verwaltung von Unterrichtsstunden
-- Konfliktprävention durch Unique Constraints
-- Vertretungs- und Ausfalllogik
-- Rollenbasiertes Berechtigungskonzept
+## Data Dictionary 
 
 ---
 
@@ -163,25 +145,6 @@ Das LearnOn-System ist ein relationales Datenbanksystem zur Verwaltung von Stund
 
 ---
 
-## Berechtigungskonzept
-
-### Rollen
-
-1. **LearnOn_Admin**: Vollzugriff für Systemadministratoren
-2. **LearnOn_Stundenplan_Verwalter**: Schreibzugriff für Schulleitung/Sekretariat  
-3. **LearnOn_Lehrer**: Lesezugriff für Lehrkräfte
-4. **LearnOn_Schueler**: Eingeschränkter Lesezugriff für Schüler/Eltern
-5. **LearnOn_Vertretungs_Verwalter**: Spezialrechte für Vertretungsplanung
-
-### Sicherheitsprinzipien
-
-- **Principle of Least Privilege**: Minimale notwendige Rechte
-- **Rollenbasierte Zugriffskontrolle (RBAC)**
-- **Datenschutz**: Views mit eingeschränkter Sichtbarkeit
-- **Auditierbarkeit**: Benannte Benutzerkonten ohne Passwort
-
----
-
 ## Datenintegrität und Constraints
 
 ### Referenzielle Integrität
@@ -201,5 +164,3 @@ Das System verhindert durch Unique Constraints:
 - Mehrfachbelegung von Lerngruppen zur gleichen Zeit
 
 ---
-
-**Hinweis:** Dieses Data Dictionary beschreibt die Produktivversion 1.0 des LearnOn-Systems. Änderungen an der Datenbankstruktur müssen entsprechend dokumentiert und versioniert werden.
