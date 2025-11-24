@@ -1,67 +1,84 @@
--- ====================================================
--- LearnOn - Stundenplan-Datenbank für unser Gymnasium
--- ====================================================
--- 
--- Hey! Das hier ist die Datenbank für unser Stundenplan-System.
--- Damit können wir endlich den ganzen Papierkram loswerden und 
--- alles digital verwalten - von Klasse 5 bis zur Oberstufe.
+-- ================================================================================
+-- LearnOn Stundenplan-Verwaltungssystem - Datenbankstruktur
+-- ================================================================================
+-- Dieses Skript erstellt die gesamte Datenbankstruktur für das LearnOn System,
+-- ein relationales Datenbanksystem zur Verwaltung von Stundenplänen eines 
+-- Gymnasiums (Jahrgangsstufen 5-13).
 --
--- Was kann das System?
--- ✓ Alle Stunden verwalten (wer, was, wann, wo)
--- ✓ Verhindert automatisch Doppelbuchungen 
--- ✓ Vertretungsplan mit Rückverfolgung zur Original-Stunde
--- ✓ Verschiedene Benutzerrechte für Lehrer, Schüler, Verwaltung
+-- Kernfunktionalitäten:
+-- - Zentrale Verwaltung von Unterrichtsstunden (Wer, Was, Wann, Wo)
+-- - Konfliktprävention durch Unique Constraints (Lehrer/Raum/Lerngruppe zur gleichen Zeit)
+-- - Vertretungs- und Ausfalllogik mit Verweis auf ursprüngliche Regel-Stunden
 --
--- Erstellt für MariaDB - läuft aber auch mit MySQL
--- ====================================================
+-- DBMS: MariaDB
+-- ================================================================================
 
--- Alte Datenbank löschen (falls vorhanden) und neu aufbauen
+-- Datenbank neu erstellen (falls vorhanden, verherige Datenbank löschen)
 DROP DATABASE IF EXISTS LearnOn;
 CREATE DATABASE LearnOn;
 USE LearnOn;
 
--- Erst mal die Grundlagen: Wo findet alles statt?
-
--- Alle Schulgebäude (Hauptgebäude, Neubau, Sporthalle, etc.)
+/*
+ * Speichert alle Gebäude der Schule.
+ * Jedes Gebäude hat einen eindeutigen Namen und dient als Standort für Räume.
+ */
 CREATE TABLE Gebaeude (
-    GebaeudeID INT AUTO_INCREMENT PRIMARY KEY,
-    Name VARCHAR(50) NOT NULL UNIQUE  -- z.B. "Hauptgebäude", "Naturwissenschaften"
+    GebaeudeID INT AUTO_INCREMENT PRIMARY KEY, -- Eindeutige ID des Gebäudes
+    Name VARCHAR(50) NOT NULL UNIQUE           -- Name des Gebäudes (z.B. 'Hauptgebäude', 'Sporthalle')
 ) ENGINE=InnoDB;
 
--- Alle Räume mit ihrem Typ (normale Klassen, Fachräume, etc.)
+/*
+ * Speichert alle Räume der Schule mit ihrer Zuordnung zu Gebäuden.
+ * Jeder Raum hat einen Typ, der angibt, für welche Art von Unterricht er geeignet ist.
+ */
 CREATE TABLE Raeume (
-    RaumID INT AUTO_INCREMENT PRIMARY KEY,
-    GebaeudeID INT NOT NULL,           -- in welchem Gebäude?
-    Name VARCHAR(20) NOT NULL,         -- z.B. "A101", "Chemielabor"
-    Typ VARCHAR(30),                   -- "Standard", "IT", "Chemie", "Physik"...
+    RaumID INT AUTO_INCREMENT PRIMARY KEY,     -- Eindeutige ID des Raums
+    GebaeudeID INT NOT NULL,                   -- Verweis auf das Gebäude
+    Name VARCHAR(20) NOT NULL,                 -- Raumbezeichnung (z.B. 'A101', 'Chemielabor')
+    Typ VARCHAR(30),                           -- Raumtyp (z.B. 'Standard', 'IT', 'Chemie', 'Physik')
     
+    -- Foreign Key Constraints
     FOREIGN KEY (GebaeudeID) REFERENCES Gebaeude(GebaeudeID) 
         ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
--- Jetzt zu den Menschen: Alle unsere Lehrkräfte
+
+/*
+ * Speichert alle Lehrkräfte der Schule.
+ * Jede Lehrkraft hat ein eindeutiges Kürzel für die Stundenplanung.
+ */
 CREATE TABLE Lehrer (
-    LehrerID INT AUTO_INCREMENT PRIMARY KEY,
-    Kuerzel VARCHAR(5) NOT NULL UNIQUE,  -- das bekannte 3-Buchstaben-Kürzel
-    Name VARCHAR(100) NOT NULL           -- der richtige Name
+    LehrerID INT AUTO_INCREMENT PRIMARY KEY,   -- Eindeutige ID der Lehrkraft
+    Kuerzel VARCHAR(5) NOT NULL UNIQUE,        -- Einzigartiges Kürzel des Lehrers (z.B. 'MUE', 'SCH')
+    Name VARCHAR(100) NOT NULL                 -- Vollständiger Name der Lehrkraft
 ) ENGINE=InnoDB;
 
 
--- Was wird unterrichtet? Alle unsere Fächer
+/*
+ * Speichert alle Unterrichtsfächer der Schule.
+ * Das Flag 'IstFachraumErforderlich' gibt an, ob für das Fach ein spezieller
+ * Fachraum benötigt wird (z.B. Chemielabor für Chemie).
+ */
 CREATE TABLE Faecher (
-    FachID INT AUTO_INCREMENT PRIMARY KEY,
-    Kuerzel VARCHAR(5) NOT NULL UNIQUE,    -- "MA", "CH", "IF" usw.
-    Name VARCHAR(50) NOT NULL,             -- "Mathematik", "Chemie", "Informatik"
-    IstFachraumErforderlich BOOLEAN NOT NULL DEFAULT FALSE  -- braucht man einen Fachraum?
+    FachID INT AUTO_INCREMENT PRIMARY KEY,     -- Eindeutige ID des Fachs
+    Kuerzel VARCHAR(5) NOT NULL UNIQUE,        -- Fachkürzel (z.B. 'MA', 'CH', 'IF')
+    Name VARCHAR(50) NOT NULL,                 -- Vollständiger Fachname
+    IstFachraumErforderlich BOOLEAN NOT NULL DEFAULT FALSE -- TRUE wenn Fachraum erforderlich
 ) ENGINE=InnoDB;
 
--- Wer kann was unterrichten? (Ein Lehrer kann mehrere Fächer haben)
+
+/*
+ * Many-to-Many Verknüpfung zwischen Lehrern und Fächern.
+ * Definiert, welche Lehrkraft welche Fächer unterrichten darf/kann.
+ */
 CREATE TABLE Lehrer_Faecher (
-    LehrerID INT NOT NULL,
-    FachID INT NOT NULL,
+    LehrerID INT NOT NULL,                     -- Verweis auf Lehrkraft
+    FachID INT NOT NULL,                       -- Verweis auf Fach
     
-    PRIMARY KEY (LehrerID, FachID),  -- zusammengesetzter Schlüssel
+    -- Kombinierter Primärschlüssel
+    PRIMARY KEY (LehrerID, FachID),
     
+    -- Foreign Key Constraints
     FOREIGN KEY (LehrerID) REFERENCES Lehrer(LehrerID) 
         ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY (FachID) REFERENCES Faecher(FachID) 
@@ -69,23 +86,32 @@ CREATE TABLE Lehrer_Faecher (
 ) ENGINE=InnoDB;
 
 
--- Wann findet alles statt? Unser Stundenraster
--- (1=Montag, 2=Dienstag usw., Stunden 1-8 oder mehr)
+/*
+ * Definiert das Zeitraster der Schule.
+ * Jeder Zeitslot ist eine eindeutige Kombination aus Wochentag und Stunde.
+ * Wochentag: 1=Montag, 2=Dienstag, 3=Mittwoch, 4=Donnerstag, 5=Freitag
+ * Stunde: 1=1. Stunde, 2=2. Stunde, etc.
+ */
 CREATE TABLE Zeitslots (
-    ZeitSlotID INT AUTO_INCREMENT PRIMARY KEY,
-    Wochentag INT NOT NULL,    -- 1-5 für Mo-Fr 
-    Stunde INT NOT NULL,       -- 1, 2, 3, 4, 5, 6, 7, 8...
+    ZeitSlotID INT AUTO_INCREMENT PRIMARY KEY, -- Eindeutige ID des Zeitslots
+    Wochentag INT NOT NULL,                    -- Wochentag (1-5 für Mo-Fr)
+    Stunde INT NOT NULL,                       -- Stundennummer (1-8 für 1.-8. Stunde)
     
-    UNIQUE (Wochentag, Stunde)  -- jeder Zeitslot nur einmal
+    -- Unique Constraint: Pro Wochentag und Stunde nur ein Zeitslot
+    UNIQUE (Wochentag, Stunde)
 ) ENGINE=InnoDB;
 
--- Wen unterrichten wir? Klassen und Kurse
--- (normale Klassen wie "10B", Oberstufen-Kurse wie "Q1-LK-DE")
+
+/*
+ * Speichert alle Lerngruppen der Schule (Klassen und Kurse).
+ * Unterscheidet zwischen festen Klassen (z.B. '10B') und 
+ * Kursen der Oberstufe (z.B. 'Q1-LK-DE-1').
+ */
 CREATE TABLE Lerngruppen_Kurse (
-    LerngruppeID INT AUTO_INCREMENT PRIMARY KEY,
-    Name VARCHAR(20) NOT NULL UNIQUE,     -- "10B", "Q1-LK-DE-1" usw.
-    Typ ENUM('Klasse', 'Kurs') NOT NULL,  -- ist es eine feste Klasse oder ein Kurs?
-    Jahrgangsstufe INT                    -- 5, 6, 7... bis 13
+    LerngruppeID INT AUTO_INCREMENT PRIMARY KEY, -- Eindeutige ID der Lerngruppe
+    Name VARCHAR(20) NOT NULL UNIQUE,           -- Name der Lerngruppe (z.B. '10B', 'Q1-LK-DE-1')
+    Typ ENUM('Klasse', 'Kurs') NOT NULL,        -- Art der Lerngruppe
+    Jahrgangsstufe INT                          -- Jahrgangsstufe (5-13)
 ) ENGINE=InnoDB;
 
 
